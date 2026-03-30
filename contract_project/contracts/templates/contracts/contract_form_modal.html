@@ -1,0 +1,517 @@
+<form method="post" id="modal-form" action="{{ request.path }}" enctype="multipart/form-data">
+    <!-- Отладка дат -->
+    <script>
+        console.log('=== Данные формы ===');
+        console.log('Дата договора (initial):', '{{ form.initial.date|default:"нет" }}');
+        console.log('Дата завершения (initial):', '{{ form.initial.completion_date|default:"нет" }}');
+        console.log('Дата договора (instance):', '{{ form.instance.date|default:"нет" }}');
+        console.log('Дата завершения (instance):', '{{ form.instance.completion_date|default:"нет" }}');
+    </script>
+    {% csrf_token %}
+    
+    <!-- Общие ошибки формы -->
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+    
+    <div class="row g-3" style="padding-bottom: 70px;">
+        <!-- Левая колонка -->
+        <div class="col-md-6">
+            <!-- Основная информация -->
+            <div class="card mb-3">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle text-primary"></i> Основная информация
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label for="{{ form.number.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-hash"></i> {{ form.number.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.number }}
+                        {% if form.number.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.number.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label for="{{ form.contract_type.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-file-text"></i> {{ form.contract_type.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.contract_type }}
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.date.id_for_label }}" class="form-label fw-bold small">
+                                <i class="bi bi-calendar"></i> {{ form.date.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.date }}
+                        </div>
+                        
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.completion_date.id_for_label }}" class="form-label fw-bold small">
+                                <i class="bi bi-calendar-check"></i> {{ form.completion_date.label }}
+                            </label>
+                            {{ form.completion_date }}
+                            <div class="form-text small">Опционально</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label for="{{ form.amount.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-currency-ruble"></i> {{ form.amount.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group input-group-sm">
+                            {{ form.amount }}
+                            <span class="input-group-text">₽</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Детали работ -->
+            <div class="card mb-3">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0">
+                        <i class="bi bi-briefcase text-primary"></i> Детали работ
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label for="{{ form.work_type.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-tools"></i> {{ form.work_type.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.work_type }}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label for="{{ form.address.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-geo-alt"></i> {{ form.address.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.address }}
+                        <div class="form-text small">Начните вводить адрес для поиска по ФИАС</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Правая колонка -->
+        <div class="col-md-6">
+            <!-- Заказчик с КНОПКОЙ -->
+            <!-- Заказчик -->
+            <div class="card mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-building text-primary"></i>
+                        <strong>Заказчик</strong>
+                        <span class="text-danger">*</span>
+                    </span>
+                    <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="openCustomerModal()">
+                        <i class="bi bi-plus-circle"></i>
+                        <span class="small">добавить</span>
+                    </a>
+                </div>
+                <div class="card-body">
+                    {{ form.customer }}
+                    <small class="text-muted d-block mt-1">
+                        <i class="bi bi-info-circle"></i> 
+                        Нет нужного заказчика? Нажмите <span class="text-success">"добавить"</span> — откроется новая вкладка
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Ответственные сотрудники -->
+            <div class="card mb-3">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0">
+                        <i class="bi bi-people text-primary"></i> Ответственные сотрудники
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label for="{{ form.geodesist.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-person-badge"></i> {{ form.geodesist.label }}
+                        </label>
+                        {{ form.geodesist }}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label for="{{ form.cadastral_engineer.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-person-workspace"></i> {{ form.cadastral_engineer.label }}
+                        </label>
+                        {{ form.cadastral_engineer }}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label for="{{ form.designer.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-person-check"></i> {{ form.designer.label }}
+                        </label>
+                        {{ form.designer }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Дополнительная информация -->
+            <div class="card mb-3">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0">
+                        <i class="bi bi-envelope text-primary"></i> Дополнительно
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label for="{{ form.notification.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-envelope"></i> {{ form.notification.label }}
+                        </label>
+                        {{ form.notification }}
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.status.id_for_label }}" class="form-label fw-bold small">
+                                <i class="bi bi-flag"></i> {{ form.status.label }}
+                            </label>
+                            {{ form.status }}
+                        </div>
+                        
+                        <div class="col-md-6 mb-2">
+                            <label for="{{ form.priority.id_for_label }}" class="form-label fw-bold small">
+                                <i class="bi bi-star"></i> {{ form.priority.label }}
+                            </label>
+                            {{ form.priority }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Кнопки - фиксированные внизу (белый фон) -->
+    <div class="modal-footer" style="position: sticky; bottom: 0; background: white; z-index: 10; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); border-top: 1px solid #dee2e6; margin-top: 15px;">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> Отмена
+        </button>
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-save"></i> Сохранить договор
+        </button>
+    </div>
+</form>
+
+<style>
+    /* Стили для правильного отображения */
+    .modal-body {
+        padding: 1rem;
+        position: relative;
+        overflow-y: auto;
+        max-height: calc(100vh - 120px);
+    }
+    
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .card:last-child {
+        margin-bottom: 0;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+        padding: 6px 12px;
+    }
+    
+    .card-header h6 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .form-label {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+        font-weight: 500;
+    }
+    
+    .form-control, .form-select {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+        height: auto;
+    }
+    
+    textarea.form-control {
+        min-height: 60px;
+    }
+    
+    .input-group-sm > .form-control {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+    
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+    }
+    
+    .mb-2 {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .g-3 {
+        --bs-gutter-y: 0.5rem;
+        --bs-gutter-x: 0.75rem;
+    }
+    
+    .form-text {
+        font-size: 0.65rem;
+        margin-top: 2px;
+        color: #6c757d;
+    }
+    
+    /* Убираем дублирование подсказок */
+    .card .form-text:not(:first-of-type) {
+        display: none;
+    }
+</style>
+
+<script>
+    // Функция для открытия модального окна добавления заказчика
+    function openCustomerModal() {
+        // Используем прямой URL вместо named URL
+        const url = '/customers/create/';
+        const title = 'Добавить заказчика';
+        
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function(data) {
+                $('#modalTitle').text(title);
+                $('#actionModal .modal-body').html(data);
+                
+                const modalElement = document.getElementById('actionModal');
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            },
+            error: function(xhr, status, error) {
+                console.error('Ошибка загрузки формы:', error);
+                alert('Ошибка загрузки формы. Проверьте, что сервер запущен.');
+            }
+        });
+    }
+    
+    // Функция для обновления списка заказчиков после добавления нового
+    function refreshCustomerList() {
+        $.ajax({
+            url: '/customers/json/',
+            method: 'GET',
+            success: function(data) {
+                const select = $('#id_customer');
+                const currentValue = select.val();
+                select.empty();
+                select.append('<option value="">---------</option>');
+                $.each(data.customers, function(index, customer) {
+                    select.append('<option value="' + customer.id + '">' + customer.name + '</option>');
+                });
+                if (currentValue && data.customers.some(c => c.id == currentValue)) {
+                    select.val(currentValue);
+                }
+            }
+        });
+    }
+    
+    // Обработка успешного сохранения заказчика
+    $(document).on('submit', '#modal-form', function(e) {
+        const form = $(this);
+        const action = form.attr('action');
+        
+        // Если это форма создания заказчика
+        if (action && action.includes('/customers/create/')) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            $.ajax({
+                url: action,
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Закрываем модальное окно
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
+                        modal.hide();
+                        // Обновляем список заказчиков
+                        refreshCustomerList();
+                    } else if (response.html) {
+                        $('#actionModal .modal-body').html(response.html);
+                    } else {
+                        alert('Ошибка при сохранении заказчика');
+                    }
+                },
+                error: function() {
+                    alert('Ошибка при сохранении заказчика');
+                }
+            });
+            return false;
+        }
+    });
+    
+    $(document).ready(function() {
+        // Убираем дублирующиеся подсказки
+        $('.form-text').each(function() {
+            if ($(this).prev('.form-text').length) {
+                $(this).remove();
+            }
+        });
+        
+        // Инициализация DaData для поля адреса
+        const addressField = $('#id_address');
+        if (addressField.length && typeof $.fn.suggestions !== 'undefined') {
+            addressField.suggestions({
+                token: 'YOUR_DADATA_API_KEY',
+                type: 'ADDRESS',
+                constraints: { locations: { country: 'Россия' } },
+                addClass: 'form-control form-control-sm'
+            });
+        }
+    });
+
+    // Функция инициализации DaData
+    function initDaData() {
+        const addressField = document.getElementById('id_address');
+        if (!addressField) return;
+        
+        // Проверяем наличие jQuery и плагина
+        if (typeof $ === 'undefined') {
+            console.error('jQuery не загружен');
+            return;
+        }
+        
+        if (typeof $.fn.suggestions === 'undefined') {
+            console.error('Плагин suggestions не загружен');
+            return;
+        }
+        
+        const apiKey = '{{ DADATA_API_KEY }}';
+        if (!apiKey || apiKey === 'YOUR_DADATA_API_KEY' || apiKey === '') {
+            console.warn('API ключ DaData не настроен');
+            addressField.placeholder = 'Введите адрес (подсказки не работают, нет API ключа)';
+            return;
+        }
+        
+        $(addressField).suggestions({
+            token: apiKey,
+            type: 'ADDRESS',
+            constraints: {
+                locations: { country: 'Россия' }
+            },
+            addClass: 'form-control form-control-sm',
+            onSelect: function(suggestion) {
+                console.log('Выбран адрес:', suggestion.data);
+            },
+            onError: function(error) {
+                console.error('Ошибка DaData:', error);
+            }
+        });
+        
+        console.log('DaData инициализирован успешно');
+    }
+    
+    // Запускаем инициализацию после загрузки страницы
+    $(document).ready(function() {
+        initDaData();
+    });
+    
+    // Если форма загружается через AJAX, запускаем инициализацию снова
+    $(document).on('DOMNodeInserted', '#id_address', function() {
+        initDaData();
+    });
+
+    // Функция для обновления списка заказчиков после добавления нового
+    function refreshCustomerList() {
+        $.ajax({
+            url: '/customers/json/',
+            method: 'GET',
+            success: function(data) {
+                const select = $('#id_customer');
+                const currentValue = select.val();
+                select.empty();
+                select.append('<option value="">---------</option>');
+                $.each(data.customers, function(index, customer) {
+                    select.append('<option value="' + customer.id + '">' + customer.name + '</option>');
+                });
+                if (currentValue) {
+                    select.val(currentValue);
+                }
+            },
+            error: function() {
+                console.error('Ошибка загрузки списка заказчиков');
+            }
+        });
+    }
+    // Принудительная установка дат
+    $(document).ready(function() {
+        console.log('=== Проверка дат ===');
+        
+        // Функция установки даты
+        function setDateValue(fieldId, dateValue) {
+            const field = $(fieldId);
+            if (field.length && dateValue) {
+                // Форматируем дату в YYYY-MM-DD
+                let formattedDate = dateValue;
+                if (dateValue.includes('.')) {
+                    const parts = dateValue.split('.');
+                    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+                field.val(formattedDate);
+                console.log(`Установлена дата для ${fieldId}: ${formattedDate}`);
+            }
+        }
+        
+        // Получаем даты из скрытых полей или из атрибутов
+        const dateFromAttr = $('#id_date').attr('value');
+        const completionFromAttr = $('#id_completion_date').attr('value');
+        
+        console.log('date attr value:', dateFromAttr);
+        console.log('completion attr value:', completionFromAttr);
+        
+        if (dateFromAttr && dateFromAttr !== '') {
+            setDateValue('#id_date', dateFromAttr);
+        }
+        
+        if (completionFromAttr && completionFromAttr !== '') {
+            setDateValue('#id_completion_date', completionFromAttr);
+        }
+        
+        // Если не установилось через attr, пробуем через data
+        if (!$('#id_date').val()) {
+            const dateText = $('input[name="date"]').data('value');
+            if (dateText) setDateValue('#id_date', dateText);
+        }
+        
+        if (!$('#id_completion_date').val()) {
+            const completionText = $('input[name="completion_date"]').data('value');
+            if (completionText) setDateValue('#id_completion_date', completionText);
+        }
+    });
+</script>

@@ -1,0 +1,8 @@
+<form method="post" id="modal-form" action="{{ request.path }}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+    </div>
+</form>

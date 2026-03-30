@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white text-center py-3">
+                <h4 class="mb-0">
+                    <i class="bi bi-person-plus"></i> Регистрация нового пользователя
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>Пожалуйста, исправьте следующие ошибки:</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">
+                            <i class="bi bi-person"></i> Имя пользователя
+                        </label>
+                        <input type="text" name="username" id="id_username" 
+                               class="form-control" required>
+                        <div class="form-text">
+                            Обязательное поле. Только буквы, цифры и символы @/./+/-/_.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="id_password1" class="form-label">
+                            <i class="bi bi-key"></i> Пароль
+                        </label>
+                        <input type="password" name="password1" id="id_password1" 
+                               class="form-control" required>
+                        <div class="form-text">
+                            Пароль должен содержать не менее 8 символов и не должен быть слишком простым.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="id_password2" class="form-label">
+                            <i class="bi bi-check-circle"></i> Подтверждение пароля
+                        </label>
+                        <input type="password" name="password2" id="id_password2" 
+                               class="form-control" required>
+                        <div class="form-text">
+                            Введите тот же пароль для подтверждения.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-lg"></i> Зарегистрироваться
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="mb-0">
+                        Уже есть аккаунт? 
+                        <a href="{% url 'login' %}" class="text-decoration-none">
+                            <i class="bi bi-box-arrow-in-right"></i> Войдите
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

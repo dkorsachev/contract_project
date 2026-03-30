@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Дашборд{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .dashboard-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        border-radius: 12px;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-speedometer2 text-primary"></i> Аналитика договоров
+        </h1>
+        <small class="text-muted">Обновлено: {% now "d.m.Y H:i" %}</small>
+    </div>
+
+    <div class="row g-4">
+        <!-- График по месяцам -->
+        <div class="col-md-12">
+            <div class="card dashboard-card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-calendar-chart text-primary"></i> Динамика договоров по месяцам
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <!-- Распределение по статусам -->
+        <div class="col-md-6">
+            <div class="card dashboard-card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-pie-chart text-primary"></i> Распределение по статусам
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Распределение по приоритетам -->
+        <div class="col-md-6">
+            <div class="card dashboard-card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-star-fill text-primary"></i> Распределение по приоритетам
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="priorityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <!-- Виды работ -->
+        <div class="col-md-6">
+            <div class="card dashboard-card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-briefcase text-primary"></i> Виды работ
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="workTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Суммы по статусам -->
+        <div class="col-md-6">
+            <div class="card dashboard-card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-currency-ruble text-primary"></i> Суммы договоров по статусам
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="amountChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <!-- Топ заказчиков -->
+        <div class="col-md-6">
+            <div class="card dashboard-card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-building text-primary"></i> Топ-10 заказчиков по сумме
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for customer in top_customers %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-building text-secondary me-2"></i>
+                                {{ customer.customer__name|truncatechars:35 }}
+                                <span class="badge bg-secondary ms-2">{{ customer.contract_count }} дог.</span>
+                            </div>
+                            <strong class="text-success">{{ customer.total_amount|floatformat:0 }} ₽</strong>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-3">Нет данных</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Топ сотрудников -->
+        <div class="col-md-6">
+            <div class="card dashboard-card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-people text-primary"></i> Топ сотрудников по сумме
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item bg-light">
+                            <strong>Геодезисты</strong>
+                        </div>
+                        {% for emp in geodesist_stats %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center ps-4">
+                            <div>
+                                <i class="bi bi-person text-secondary me-2"></i>
+                                {{ emp.geodesist__full_name|default:"Не указан" }}
+                                <span class="badge bg-secondary ms-2">{{ emp.contract_count }} дог.</span>
+                            </div>
+                            <strong class="text-success">{{ emp.total_amount|floatformat:0 }} ₽</strong>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted ps-4">Нет данных</div>
+                        {% endfor %}
+                        
+                        <div class="list-group-item bg-light mt-2">
+                            <strong>Кадастровые инженеры</strong>
+                        </div>
+                        {% for emp in engineer_stats %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center ps-4">
+                            <div>
+                                <i class="bi bi-person text-secondary me-2"></i>
+                                {{ emp.cadastral_engineer__full_name|default:"Не указан" }}
+                                <span class="badge bg-secondary ms-2">{{ emp.contract_count }} дог.</span>
+                            </div>
+                            <strong class="text-success">{{ emp.total_amount|floatformat:0 }} ₽</strong>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted ps-4">Нет данных</div>
+                        {% endfor %}
+                        
+                        <div class="list-group-item bg-light mt-2">
+                            <strong>Оформители</strong>
+                        </div>
+                        {% for emp in designer_stats %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center ps-4">
+                            <div>
+                                <i class="bi bi-person text-secondary me-2"></i>
+                                {{ emp.designer__full_name|default:"Не указан" }}
+                                <span class="badge bg-secondary ms-2">{{ emp.contract_count }} дог.</span>
+                            </div>
+                            <strong class="text-success">{{ emp.total_amount|floatformat:0 }} ₽</strong>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted ps-4">Нет данных</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Данные для графиков
+    const monthsData = {{ months_data|safe }};
+    const statusStats = {{ status_stats|safe }};
+    const priorityStats = {{ priority_stats|safe }};
+    const workTypeStats = {{ work_type_stats|safe }};
+    
+    // График по месяцам
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'line',
+        data: {
+            labels: monthsData.map(d => d.month),
+            datasets: [
+                {
+                    label: 'Количество договоров',
+                    data: monthsData.map(d => d.count),
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Сумма (тыс. руб.)',
+                    data: monthsData.map(d => d.amount / 1000),
+                    borderColor: '#20c997',
+                    backgroundColor: 'rgba(32, 201, 151, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'top' }
+            },
+            scales: {
+                y: { 
+                    title: { display: true, text: 'Количество' },
+                    beginAtZero: true
+                },
+                y1: { 
+                    position: 'right', 
+                    title: { display: true, text: 'Сумма (тыс. руб.)' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // График статусов
+    if (statusStats.length > 0) {
+        new Chart(document.getElementById('statusChart'), {
+            type: 'pie',
+            data: {
+                labels: statusStats.map(s => s.name),
+                datasets: [{
+                    data: statusStats.map(s => s.count),
+                    backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+    
+    // График приоритетов
+    if (priorityStats.length > 0) {
+        new Chart(document.getElementById('priorityChart'), {
+            type: 'doughnut',
+            data: {
+                labels: priorityStats.map(p => p.name),
+                datasets: [{
+                    data: priorityStats.map(p => p.count),
+                    backgroundColor: priorityStats.map(p => p.color)
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+    
+    // График видов работ
+    if (workTypeStats.length > 0) {
+        new Chart(document.getElementById('workTypeChart'), {
+            type: 'bar',
+            data: {
+                labels: workTypeStats.map(w => w.name),
+                datasets: [{
+                    label: 'Количество договоров',
+                    data: workTypeStats.map(w => w.count),
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Количество' }
+                    }
+                }
+            }
+        });
+    }
+    
+    // График сумм по статусам
+    if (statusStats.length > 0) {
+        new Chart(document.getElementById('amountChart'), {
+            type: 'bar',
+            data: {
+                labels: statusStats.map(s => s.name),
+                datasets: [{
+                    label: 'Сумма (руб.)',
+                    data: statusStats.map(s => s.amount),
+                    backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Сумма (руб.)' }
+                    }
+                }
+            }
+        });
+    }
+     // Загружаем графики после полной загрузки страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            // Инициализация графиков
+            initCharts();
+        }, 100);
+    });
+    
+    function initCharts() {
+        // Ваш код инициализации графиков
+        const monthsData = {{ months_data|safe }};
+        const statusStats = {{ status_stats|safe }};
+        // ... остальной код графиков
+    }
+</script>
+{% endblock %}

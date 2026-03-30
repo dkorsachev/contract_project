@@ -1,0 +1,112 @@
+<form method="post" id="modal-form" action="{{ request.path }}">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="mb-3">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-building"></i> Название организации *
+                </label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">ИНН</label>
+                    {{ form.inn }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">КПП</label>
+                    {{ form.kpp }}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">ОГРН</label>
+                {{ form.ogrn }}
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Юридический адрес</label>
+                {{ form.address }}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Телефон</label>
+                    {{ form.phone }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Email</label>
+                    {{ form.email }}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Контактное лицо</label>
+                {{ form.contact_person }}
+            </div>
+            
+            <div class="mb-3">
+                <div class="form-check">
+                    {{ form.is_active }}
+                    <label class="form-check-label">Активен</label>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Примечания</label>
+                {{ form.notes }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> Отмена
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> Сохранить
+        </button>
+    </div>
+</form>
+
+<script>
+    // Обработка отправки формы в модальном окне
+    $(document).on('submit', '#modal-form', function(e) {
+        e.preventDefault();
+        
+        const form = $(this);
+        const formData = new FormData(this);
+        const url = form.attr('action');
+        
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Закрываем модальное окно
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
+                    modal.hide();
+                    // Перезагружаем страницу для отображения нового заказчика
+                    location.reload();
+                } else if (response.html) {
+                    $('#actionModal .modal-body').html(response.html);
+                } else {
+                    alert('Ошибка при сохранении: ' + (response.message || 'Проверьте данные'));
+                }
+            },
+            error: function(xhr) {
+                alert('Ошибка при сохранении');
+            }
+        });
+        
+        return false;
+    });
+</script>
