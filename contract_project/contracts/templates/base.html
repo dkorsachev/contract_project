@@ -315,23 +315,38 @@
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'contracts:employee_list' %}">
-                                <i class="bi bi-people"></i> Сотрудники
-                            </a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'contracts:dashboard' %}">
                                 <i class="bi bi-speedometer2"></i> Дашборд
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'contracts:customer_list' %}">
+                                <i class="bi bi-building"></i> Заказчики
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'contracts:employee_list' %}">
+                                <i class="bi bi-people"></i> Сотрудники
+                            </a>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle"></i> {{ user.username }}
+                                <i class="bi bi-person-circle"></i> 
+                                {% if user.first_name or user.last_name %}
+                                    {{ user.first_name }} {{ user.last_name }}
+                                {% else %}
+                                    {{ user.username }}
+                                {% endif %}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{% url 'logout' %}">
-                                    <i class="bi bi-box-arrow-right"></i> Выйти
-                                </a></li>
+                                <li>
+                                    <form method="post" action="{% url 'logout' %}" class="dropdown-item p-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item" style="background: none; border: none; width: 100%; text-align: left;">
+                                            <i class="bi bi-box-arrow-right"></i> Выйти
+                                        </button>
+                                    </form>
+                                </li>
                             </ul>
                         </li>
                     {% else %}
@@ -345,7 +360,6 @@
                                 <i class="bi bi-person-plus"></i> Регистрация
                             </a>
                         </li>
-                        
                     {% endif %}
                 </ul>
             </div>

@@ -1,0 +1,30 @@
+<form method="post" id="modal-form" action="{% url 'contracts:contract_delete' contract.pk %}">
+    {% csrf_token %}
+    
+    <div class="text-center py-4">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size: 4rem; color: #dc3545;"></i>
+        <h4 class="mt-3">Подтверждение удаления</h4>
+        <p class="text-muted">Вы действительно хотите удалить договор?</p>
+        
+        <div class="alert alert-warning">
+            <strong>Номер договора:</strong> {{ contract.number }}<br>
+            <strong>Заказчик:</strong> {{ contract.customer.name }}<br>
+            <strong>Сумма:</strong> {{ contract.amount|floatformat:2 }} ₽<br>
+            <strong>Дата договора:</strong> {{ contract.date|date:"d.m.Y" }}
+        </div>
+        
+        <p class="text-danger small">
+            <i class="bi bi-exclamation-circle"></i> 
+            Это действие нельзя отменить!
+        </p>
+    </div>
+    
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> Отмена
+        </button>
+        <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash"></i> Удалить
+        </button>
+    </div>
+</form>

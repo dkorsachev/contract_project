@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from django.db.models.functions import TruncMonth, TruncWeek
 from .models import Contract, Employee, Customer
 from .forms import ContractForm, EmployeeForm, CustomerForm
-import calendar
+import calendar, json
 from django.core.cache import cache
 
 
@@ -22,8 +22,6 @@ class ContractListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        
-        # Поиск по тексту
         q = self.request.GET.get('q', '')
         if q:
             queryset = queryset.filter(
@@ -32,13 +30,14 @@ class ContractListView(LoginRequiredMixin, ListView):
                 Q(work_type__icontains=q) |
                 Q(address__icontains=q) |
                 Q(customer__name__icontains=q) |
-                Q(notification__icontains=q) |
+                Q(work_description__icontains=q) |
                 Q(status__icontains=q) |
                 Q(priority__icontains=q) |
                 Q(geodesist__full_name__icontains=q) |
                 Q(cadastral_engineer__full_name__icontains=q) |
                 Q(designer__full_name__icontains=q)
             )
+            return queryset
         
         # Фильтры по сотрудникам
         geodesist_id = self.request.GET.get('geodesist')
@@ -180,15 +179,22 @@ def contract_edit(request, pk):
 
 @login_required
 def contract_delete(request, pk):
+    """Удаление договора"""
     contract = get_object_or_404(Contract, pk=pk)
+    
     if request.method == 'POST':
+        # Сохраняем номер договора для сообщения
+        contract_number = contract.number
         contract.delete()
+        
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'success'})
+            return JsonResponse({'status': 'success', 'message': f'Договор {contract_number} удален'})
         return redirect('contracts:contract_list')
     
+    # GET запрос - показываем форму подтверждения
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return render(request, 'contracts/contract_confirm_delete_modal.html', {'contract': contract})
+    
     return render(request, 'contracts/contract_confirm_delete.html', {'contract': contract})
 
 
@@ -392,157 +398,112 @@ def get_customers_json(request):
 
 @login_required
 def dashboard(request):
-    """Страница дашборда с аналитикой (оптимизированная)"""
+    """Страница дашборда с аналитикой"""
     
-    # Используем кэш на 5 минут, чтобы не делать тяжелые запросы при каждом открытии
-    cache_key = 'dashboard_data'
-    context = cache.get(cache_key)
+    # Основные статистики
+    total_contracts = Contract.objects.count()
+    total_amount = Contract.objects.aggregate(total=Sum('amount'))['total'] or 0
     
-    if context is None:
-        # Получаем все договоры одним запросом с агрегацией
-        contracts_aggregate = Contract.objects.aggregate(
-            total_count=Count('id'),
-            total_amount=Sum('amount')
-        )
+    # Статистика по статусам
+    status_stats = []
+    status_colors = {
+        'completed': '#28a745',
+        'in_progress': '#ffc107',
+        'finished': '#17a2b8',
+        'suspended': '#dc3545'
+    }
+    
+    for status_code, status_name in Contract.STATUS_CHOICES:
+        count = Contract.objects.filter(status=status_code).count()
+        amount = Contract.objects.filter(status=status_code).aggregate(total=Sum('amount'))['total'] or 0
+        status_stats.append({
+            'code': status_code,
+            'name': status_name,
+            'count': count,
+            'amount': float(amount),
+            'color': status_colors.get(status_code, '#6c757d')
+        })
+    
+    # Статистика по приоритетам
+    priority_stats = []
+    priority_colors = {
+        'relax': '#28a745',
+        'normal': '#007bff',
+        'urgent': '#ffc107',
+        'critical': '#dc3545'
+    }
+    
+    for priority_code, priority_name in Contract.PRIORITY_CHOICES:
+        count = Contract.objects.filter(priority=priority_code).count()
+        amount = Contract.objects.filter(priority=priority_code).aggregate(total=Sum('amount'))['total'] or 0
+        priority_stats.append({
+            'code': priority_code,
+            'name': priority_name,
+            'count': count,
+            'amount': float(amount),
+            'color': priority_colors.get(priority_code, '#6c757d')
+        })
+    
+    # Статистика по месяцам (последние 6 месяцев)
+    today = timezone.now().date()
+    months_data = []
+    
+    for i in range(5, -1, -1):
+        # Вычисляем месяц
+        month_date = today.replace(day=1) - timedelta(days=i*30)
+        month_start = month_date.replace(day=1)
         
-        total_contracts = contracts_aggregate['total_count'] or 0
-        total_amount = contracts_aggregate['total_amount'] or 0
+        # Вычисляем конец месяца
+        if month_date.month == 12:
+            month_end = month_date.replace(year=month_date.year+1, month=1, day=1) - timedelta(days=1)
+        else:
+            month_end = month_date.replace(month=month_date.month+1, day=1) - timedelta(days=1)
         
-        # Статистика по статусам (один запрос)
-        status_counts = Contract.objects.values('status').annotate(
-            count=Count('id'),
-            amount=Sum('amount')
-        )
-        status_dict = {item['status']: item for item in status_counts}
-        
-        status_stats = []
-        for status_code, status_name in Contract.STATUS_CHOICES:
-            data = status_dict.get(status_code, {'count': 0, 'amount': 0})
-            count = data['count']
-            amount = data['amount'] or 0
-            status_stats.append({
-                'code': status_code,
-                'name': status_name,
-                'count': count,
-                'amount': amount,
-                'percentage': (count / total_contracts * 100) if total_contracts > 0 else 0
-            })
-        
-        # Статистика по приоритетам (один запрос)
-        priority_counts = Contract.objects.values('priority').annotate(
-            count=Count('id'),
-            amount=Sum('amount')
-        )
-        priority_dict = {item['priority']: item for item in priority_counts}
-        
-        priority_stats = []
-        priority_colors = {
-            'relax': '#28a745',
-            'normal': '#007bff',
-            'urgent': '#ffc107',
-            'critical': '#dc3545'
-        }
-        for priority_code, priority_name in Contract.PRIORITY_CHOICES:
-            data = priority_dict.get(priority_code, {'count': 0, 'amount': 0})
-            priority_stats.append({
-                'code': priority_code,
-                'name': priority_name,
-                'count': data['count'],
-                'amount': data['amount'] or 0,
-                'color': priority_colors.get(priority_code, '#6c757d')
-            })
-        
-        # Топ заказчиков (ограничиваем 10)
-        top_customers = Contract.objects.values('customer__name').annotate(
-            total_amount=Sum('amount'),
-            contract_count=Count('id')
-        ).filter(customer__isnull=False).order_by('-total_amount')[:10]
-        
-        # Статистика по сотрудникам (один запрос на каждого, но с фильтрацией)
-        geodesist_stats = Contract.objects.values('geodesist__full_name').annotate(
-            total_amount=Sum('amount'),
-            contract_count=Count('id')
-        ).filter(geodesist__isnull=False).order_by('-total_amount')[:5]
-        
-        engineer_stats = Contract.objects.values('cadastral_engineer__full_name').annotate(
-            total_amount=Sum('amount'),
-            contract_count=Count('id')
-        ).filter(cadastral_engineer__isnull=False).order_by('-total_amount')[:5]
-        
-        designer_stats = Contract.objects.values('designer__full_name').annotate(
-            total_amount=Sum('amount'),
-            contract_count=Count('id')
-        ).filter(designer__isnull=False).order_by('-total_amount')[:5]
-        
-        # Статистика по месяцам (только последние 6 месяцев для ускорения)
-        today = timezone.now().date()
-        months_data = []
-        
-        for i in range(5, -1, -1):
-            month_date = today.replace(day=1) - timedelta(days=i*30)
-            month_start = month_date.replace(day=1)
-            
-            if month_date.month == 12:
-                month_end = month_date.replace(year=month_date.year+1, month=1, day=1) - timedelta(days=1)
-            else:
-                month_end = month_date.replace(month=month_date.month+1, day=1) - timedelta(days=1)
-            
-            # Один запрос на месяц
-            month_data = Contract.objects.filter(
-                date__gte=month_start, 
-                date__lte=month_end
-            ).aggregate(
-                count=Count('id'),
-                amount=Sum('amount')
-            )
-            
-            months_data.append({
-                'month': month_start.strftime('%b %Y'),
-                'count': month_data['count'] or 0,
-                'amount': month_data['amount'] or 0
-            })
-        
-        # Статистика по видам работ (один запрос)
-        work_type_counts = Contract.objects.values('work_type').annotate(
-            count=Count('id'),
-            amount=Sum('amount')
-        )
-        work_type_dict = {item['work_type']: item for item in work_type_counts}
-        
-        work_type_stats = []
-        for work_code, work_name in Contract.WORK_TYPES:
-            data = work_type_dict.get(work_code, {'count': 0, 'amount': 0})
-            work_type_stats.append({
-                'code': work_code,
-                'name': work_name,
-                'count': data['count'],
-                'amount': data['amount'] or 0
-            })
-        
-        # Проценты
-        completed_count = status_dict.get('completed', {}).get('count', 0)
-        in_progress_count = status_dict.get('in_progress', {}).get('count', 0)
-        finished_count = status_dict.get('finished', {}).get('count', 0)
-        suspended_count = status_dict.get('suspended', {}).get('count', 0)
-        
-        context = {
-            'total_contracts': total_contracts,
-            'total_amount': total_amount,
-            'status_stats': status_stats,
-            'priority_stats': priority_stats,
-            'top_customers': top_customers,
-            'geodesist_stats': geodesist_stats,
-            'engineer_stats': engineer_stats,
-            'designer_stats': designer_stats,
-            'months_data': months_data,
-            'work_type_stats': work_type_stats,
-            'completed_percentage': (completed_count / total_contracts * 100) if total_contracts > 0 else 0,
-            'in_progress_percentage': (in_progress_count / total_contracts * 100) if total_contracts > 0 else 0,
-            'finished_percentage': (finished_count / total_contracts * 100) if total_contracts > 0 else 0,
-            'suspended_percentage': (suspended_count / total_contracts * 100) if total_contracts > 0 else 0,
-        }
-        
-        # Сохраняем в кэш на 5 минут
-        cache.set(cache_key, context, 300)
+        contracts = Contract.objects.filter(date__gte=month_start, date__lte=month_end)
+        months_data.append({
+            'month': month_start.strftime('%b %Y'),
+            'count': contracts.count(),
+            'amount': float(contracts.aggregate(total=Sum('amount'))['total'] or 0)
+        })
+    
+    # Статистика по видам работ
+    work_type_stats = []
+    work_type_colors = ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14']
+    
+    for idx, (work_code, work_name) in enumerate(Contract.WORK_TYPES):
+        count = Contract.objects.filter(work_type=work_code).count()
+        amount = Contract.objects.filter(work_type=work_code).aggregate(total=Sum('amount'))['total'] or 0
+        work_type_stats.append({
+            'code': work_code,
+            'name': work_name,
+            'count': count,
+            'amount': float(amount),
+            'color': work_type_colors[idx % len(work_type_colors)]
+        })
+    
+    # Топ заказчиков
+    top_customers = Contract.objects.values('customer__name').annotate(
+        total_amount=Sum('amount'),
+        contract_count=Count('id')
+    ).filter(customer__isnull=False, total_amount__gt=0).order_by('-total_amount')[:10]
+    
+    # Преобразуем Decimal в float для JSON
+    for customer in top_customers:
+        customer['total_amount'] = float(customer['total_amount']) if customer['total_amount'] else 0
+    
+    context = {
+        'total_contracts': total_contracts,
+        'total_amount': float(total_amount),
+        'status_stats': status_stats,
+        'priority_stats': priority_stats,
+        'months_data': months_data,
+        'work_type_stats': work_type_stats,
+        'top_customers': list(top_customers),
+        # Для JSON в шаблоне
+        'status_stats_json': json.dumps(status_stats),
+        'priority_stats_json': json.dumps(priority_stats),
+        'months_data_json': json.dumps(months_data),
+        'work_type_stats_json': json.dumps(work_type_stats),
+    }
     
     return render(request, 'contracts/dashboard.html', context)

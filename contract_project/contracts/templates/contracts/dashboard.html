@@ -5,41 +5,121 @@
 
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <style>
     .dashboard-card {
         transition: transform 0.2s, box-shadow 0.2s;
         border: none;
         border-radius: 12px;
+        overflow: hidden;
     }
     .dashboard-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .stat-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     .chart-container {
         position: relative;
-        height: 300px;
+        height: 280px;
         width: 100%;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+    .card-header h6 {
+        font-weight: 600;
+        margin: 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
+    <!-- Заголовок -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">
-            <i class="bi bi-speedometer2 text-primary"></i> Аналитика договоров
+            <i class="bi bi-speedometer2 text-primary"></i> Дашборд
         </h1>
         <small class="text-muted">Обновлено: {% now "d.m.Y H:i" %}</small>
     </div>
 
-    <div class="row g-4">
-        <!-- График по месяцам -->
-        <div class="col-md-12">
+    <!-- KPI Карточки -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card dashboard-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">Всего договоров</div>
+                            <div class="stat-number">{{ total_contracts }}</div>
+                            <small>{{ total_amount|floatformat:0 }} ₽</small>
+                        </div>
+                        <i class="bi bi-file-text fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card dashboard-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">✅ Выполнено</div>
+                            <div class="stat-number">{{ status_stats.0.count|default:0 }}</div>
+                            <small>{{ status_stats.0.amount|floatformat:0 }} ₽</small>
+                        </div>
+                        <i class="bi bi-check-circle-fill fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card dashboard-card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">⚙️ В работе</div>
+                            <div class="stat-number">{{ status_stats.1.count|default:0 }}</div>
+                            <small>{{ status_stats.1.amount|floatformat:0 }} ₽</small>
+                        </div>
+                        <i class="bi bi-gear-fill fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card dashboard-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-label">💰 Общая сумма</div>
+                            <div class="stat-number">{{ total_amount|floatformat:0 }}</div>
+                            <small>рублей</small>
+                        </div>
+                        <i class="bi bi-currency-ruble fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Графики -->
+    <div class="row g-3">
+        <!-- Динамика по месяцам -->
+        <div class="col-md-8">
             <div class="card dashboard-card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-calendar-chart text-primary"></i> Динамика договоров по месяцам
-                    </h6>
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-calendar-chart me-2"></i> Динамика договоров по месяцам</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -48,16 +128,12 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-4 mt-2">
-        <!-- Распределение по статусам -->
-        <div class="col-md-6">
+        <!-- Статусы -->
+        <div class="col-md-4">
             <div class="card dashboard-card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-pie-chart text-primary"></i> Распределение по статусам
-                    </h6>
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i> Распределение по статусам</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -66,14 +142,14 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Распределение по приоритетам -->
-        <div class="col-md-6">
+    <div class="row g-3 mt-2">
+        <!-- Приоритеты -->
+        <div class="col-md-4">
             <div class="card dashboard-card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-star-fill text-primary"></i> Распределение по приоритетам
-                    </h6>
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-star-fill me-2"></i> Распределение по приоритетам</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -82,16 +158,12 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="row g-4 mt-2">
         <!-- Виды работ -->
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card dashboard-card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-briefcase text-primary"></i> Виды работ
-                    </h6>
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-briefcase me-2"></i> Виды работ</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -102,12 +174,10 @@
         </div>
 
         <!-- Суммы по статусам -->
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card dashboard-card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-currency-ruble text-primary"></i> Суммы договоров по статусам
-                    </h6>
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-currency-ruble me-2"></i> Суммы по статусам</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
@@ -118,91 +188,39 @@
         </div>
     </div>
 
-    <div class="row g-4 mt-2">
-        <!-- Топ заказчиков -->
-        <div class="col-md-6">
+    <!-- Топ заказчиков -->
+    <div class="row g-3 mt-2">
+        <div class="col-md-12">
             <div class="card dashboard-card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-building text-primary"></i> Топ-10 заказчиков по сумме
-                    </h6>
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-building me-2"></i> Топ-10 заказчиков по сумме договоров</h6>
                 </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for customer in top_customers %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-building text-secondary me-2"></i>
-                                {{ customer.customer__name|truncatechars:35 }}
-                                <span class="badge bg-secondary ms-2">{{ customer.contract_count }} дог.</span>
-                            </div>
-                            <strong class="text-success">{{ customer.total_amount|floatformat:0 }} ₽</strong>
-                        </div>
-                        {% empty %}
-                        <div class="list-group-item text-center text-muted py-3">Нет данных</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Топ сотрудников -->
-        <div class="col-md-6">
-            <div class="card dashboard-card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-people text-primary"></i> Топ сотрудников по сумме
-                    </h6>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        <div class="list-group-item bg-light">
-                            <strong>Геодезисты</strong>
-                        </div>
-                        {% for emp in geodesist_stats %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center ps-4">
-                            <div>
-                                <i class="bi bi-person text-secondary me-2"></i>
-                                {{ emp.geodesist__full_name|default:"Не указан" }}
-                                <span class="badge bg-secondary ms-2">{{ emp.contract_count }} дог.</span>
-                            </div>
-                            <strong class="text-success">{{ emp.total_amount|floatformat:0 }} ₽</strong>
-                        </div>
-                        {% empty %}
-                        <div class="list-group-item text-center text-muted ps-4">Нет данных</div>
-                        {% endfor %}
-                        
-                        <div class="list-group-item bg-light mt-2">
-                            <strong>Кадастровые инженеры</strong>
-                        </div>
-                        {% for emp in engineer_stats %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center ps-4">
-                            <div>
-                                <i class="bi bi-person text-secondary me-2"></i>
-                                {{ emp.cadastral_engineer__full_name|default:"Не указан" }}
-                                <span class="badge bg-secondary ms-2">{{ emp.contract_count }} дог.</span>
-                            </div>
-                            <strong class="text-success">{{ emp.total_amount|floatformat:0 }} ₽</strong>
-                        </div>
-                        {% empty %}
-                        <div class="list-group-item text-center text-muted ps-4">Нет данных</div>
-                        {% endfor %}
-                        
-                        <div class="list-group-item bg-light mt-2">
-                            <strong>Оформители</strong>
-                        </div>
-                        {% for emp in designer_stats %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center ps-4">
-                            <div>
-                                <i class="bi bi-person text-secondary me-2"></i>
-                                {{ emp.designer__full_name|default:"Не указан" }}
-                                <span class="badge bg-secondary ms-2">{{ emp.contract_count }} дог.</span>
-                            </div>
-                            <strong class="text-success">{{ emp.total_amount|floatformat:0 }} ₽</strong>
-                        </div>
-                        {% empty %}
-                        <div class="list-group-item text-center text-muted ps-4">Нет данных</div>
-                        {% endfor %}
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Заказчик</th>
+                                    <th>Кол-во договоров</th>
+                                    <th>Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for customer in top_customers %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td><strong>{{ customer.customer__name|default:"—" }}</strong></td>
+                                    <td>{{ customer.contract_count }}</td>
+                                    <td class="text-success fw-bold">{{ customer.total_amount|floatformat:0 }} ₽</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">Нет данных</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -211,159 +229,205 @@
 </div>
 
 <script>
-    // Данные для графиков
-    const monthsData = {{ months_data|safe }};
-    const statusStats = {{ status_stats|safe }};
-    const priorityStats = {{ priority_stats|safe }};
-    const workTypeStats = {{ work_type_stats|safe }};
-    
+    // Получаем данные из контекста
+    const monthsData = {{ months_data_json|safe }};
+    const statusStats = {{ status_stats_json|safe }};
+    const priorityStats = {{ priority_stats_json|safe }};
+    const workTypeStats = {{ work_type_stats_json|safe }};
+
     // График по месяцам
-    new Chart(document.getElementById('monthlyChart'), {
-        type: 'line',
-        data: {
-            labels: monthsData.map(d => d.month),
-            datasets: [
-                {
-                    label: 'Количество договоров',
-                    data: monthsData.map(d => d.count),
-                    borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                },
-                {
-                    label: 'Сумма (тыс. руб.)',
-                    data: monthsData.map(d => d.amount / 1000),
-                    borderColor: '#20c997',
-                    backgroundColor: 'rgba(32, 201, 151, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    yAxisID: 'y1'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { position: 'top' }
+    if (monthsData.length > 0) {
+        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: monthsData.map(d => d.month),
+                datasets: [
+                    {
+                        label: 'Количество договоров',
+                        data: monthsData.map(d => d.count),
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#0d6efd',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    },
+                    {
+                        label: 'Сумма (тыс. руб.)',
+                        data: monthsData.map(d => (d.amount / 1000).toFixed(1)),
+                        borderColor: '#20c997',
+                        backgroundColor: 'rgba(32, 201, 151, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#20c997',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        yAxisID: 'y1'
+                    }
+                ]
             },
-            scales: {
-                y: { 
-                    title: { display: true, text: 'Количество' },
-                    beginAtZero: true
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { mode: 'index', intersect: false }
                 },
-                y1: { 
-                    position: 'right', 
-                    title: { display: true, text: 'Сумма (тыс. руб.)' },
-                    beginAtZero: true
+                scales: {
+                    y: { 
+                        title: { display: true, text: 'Количество', font: { size: 12 } },
+                        beginAtZero: true,
+                        grid: { color: '#e9ecef' }
+                    },
+                    y1: { 
+                        position: 'right', 
+                        title: { display: true, text: 'Сумма (тыс. руб.)', font: { size: 12 } },
+                        beginAtZero: true,
+                        grid: { display: false }
+                    }
                 }
             }
-        }
-    });
-    
-    // График статусов
+        });
+    }
+
+    // График статусов (круговая диаграмма)
     if (statusStats.length > 0) {
-        new Chart(document.getElementById('statusChart'), {
-            type: 'pie',
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
             data: {
                 labels: statusStats.map(s => s.name),
                 datasets: [{
                     data: statusStats.map(s => s.count),
-                    backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545']
+                    backgroundColor: statusStats.map(s => s.color),
+                    borderWidth: 0,
+                    hoverOffset: 10
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { position: 'bottom' } }
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                    tooltip: { callbacks: { label: function(tooltipItem) {
+                        const value = tooltipItem.raw;
+                        const total = statusStats.reduce((sum, s) => sum + s.count, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${tooltipItem.label}: ${value} (${percentage}%)`;
+                    } } }
+                }
             }
         });
     }
-    
-    // График приоритетов
+
+    // График приоритетов (кольцевая диаграмма)
     if (priorityStats.length > 0) {
-        new Chart(document.getElementById('priorityChart'), {
+        const ctx = document.getElementById('priorityChart').getContext('2d');
+        new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: priorityStats.map(p => p.name),
                 datasets: [{
                     data: priorityStats.map(p => p.count),
-                    backgroundColor: priorityStats.map(p => p.color)
+                    backgroundColor: priorityStats.map(p => p.color),
+                    borderWidth: 2,
+                    borderColor: '#fff'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { position: 'bottom' } }
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                    tooltip: { callbacks: { label: function(tooltipItem) {
+                        const value = tooltipItem.raw;
+                        const total = priorityStats.reduce((sum, p) => sum + p.count, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${tooltipItem.label}: ${value} (${percentage}%)`;
+                    } } }
+                }
             }
         });
     }
-    
-    // График видов работ
+
+    // График видов работ (горизонтальная гистограмма)
     if (workTypeStats.length > 0) {
-        new Chart(document.getElementById('workTypeChart'), {
+        const ctx = document.getElementById('workTypeChart').getContext('2d');
+        new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: workTypeStats.map(w => w.name),
                 datasets: [{
                     label: 'Количество договоров',
                     data: workTypeStats.map(w => w.count),
-                    backgroundColor: '#0d6efd'
+                    backgroundColor: workTypeStats.map(w => w.color),
+                    borderRadius: 8,
+                    barPercentage: 0.6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { display: false } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function(tooltipItem) {
+                        return `Количество: ${tooltipItem.raw}`;
+                    } } }
+                },
                 scales: {
-                    y: {
+                    y: { 
                         beginAtZero: true,
-                        title: { display: true, text: 'Количество' }
-                    }
+                        title: { display: true, text: 'Количество', font: { size: 11 } },
+                        grid: { color: '#e9ecef' }
+                    },
+                    x: { ticks: { font: { size: 11 } } }
                 }
             }
         });
     }
-    
-    // График сумм по статусам
+
+    // График сумм по статусам (вертикальная гистограмма)
     if (statusStats.length > 0) {
-        new Chart(document.getElementById('amountChart'), {
+        const ctx = document.getElementById('amountChart').getContext('2d');
+        new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: statusStats.map(s => s.name),
                 datasets: [{
                     label: 'Сумма (руб.)',
                     data: statusStats.map(s => s.amount),
-                    backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545']
+                    backgroundColor: statusStats.map(s => s.color),
+                    borderRadius: 8,
+                    barPercentage: 0.6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                plugins: { legend: { display: false } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function(tooltipItem) {
+                        const value = tooltipItem.raw;
+                        return `Сумма: ${value.toLocaleString()} ₽`;
+                    } } }
+                },
                 scales: {
-                    y: {
+                    y: { 
                         beginAtZero: true,
-                        title: { display: true, text: 'Сумма (руб.)' }
-                    }
+                        title: { display: true, text: 'Сумма (руб.)', font: { size: 11 } },
+                        grid: { color: '#e9ecef' },
+                        ticks: { callback: function(value) { return value.toLocaleString(); } }
+                    },
+                    x: { ticks: { font: { size: 11 } } }
                 }
             }
         });
-    }
-     // Загружаем графики после полной загрузки страницы
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() {
-            // Инициализация графиков
-            initCharts();
-        }, 100);
-    });
-    
-    function initCharts() {
-        // Ваш код инициализации графиков
-        const monthsData = {{ months_data|safe }};
-        const statusStats = {{ status_stats|safe }};
-        // ... остальной код графиков
     }
 </script>
 {% endblock %}

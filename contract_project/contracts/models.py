@@ -80,6 +80,25 @@ class Contract(models.Model):
         ('customer5', 'ФГБУ "Кадастр"'),
     ]
 
+    # Варианты работ
+    WORK_DESCRIPTION_CHOICES = [
+        ('clarification', 'Уточнение'),
+        ('formation', 'Образование'),
+        ('division', 'Раздел'),
+        ('consolidation', 'Объединение'),
+        ('redistribution', 'Перераспределение'),
+        ('allocation', 'Выдел'),
+    ]
+
+    # Одиночный выбор (если нужно выбрать один пункт)
+    work_description = models.CharField(
+        max_length=50,
+        choices=WORK_DESCRIPTION_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name='Описание работ'
+    )
+
     # Основные поля
     number = models.CharField(max_length=50, unique=True, verbose_name='Номер договора')
     contract_type = models.CharField(max_length=20, choices=CONTRACT_TYPES, verbose_name='Вид договора')
@@ -108,6 +127,12 @@ class Contract(models.Model):
 
     # История изменений (django-simple-history)
     history = HistoricalRecords()
+
+    def get_work_description_display(self):
+        """Возвращает отображаемое название выбранной работы"""
+        if self.work_description:
+            return dict(self.WORK_DESCRIPTION_CHOICES).get(self.work_description, self.work_description)
+        return ''
 
     def __str__(self):
         return f"{self.number} - {self.customer}"

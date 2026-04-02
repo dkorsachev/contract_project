@@ -2,18 +2,26 @@ from django import forms
 from .models import Contract, Employee, Customer
 
 class ContractForm(forms.ModelForm):
+    # Для одиночного выбора используем ChoiceField с Select
+    work_description = forms.ChoiceField(
+        choices=[('', '---------')] + list(Contract.WORK_DESCRIPTION_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False,
+        label='Описание работ'
+    )
+    
     class Meta:
         model = Contract
         fields = [
             'number', 'contract_type', 'date', 'completion_date', 'amount',
             'work_type', 'address', 'customer', 'geodesist', 'cadastral_engineer',
-            'designer', 'notification', 'status', 'priority'
+            'designer', 'work_description', 'status', 'priority'
         ]
         widgets = {
             'number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите номер договора'}),
             'contract_type': forms.Select(attrs={'class': 'form-select'}),
-            'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
-            'completion_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'completion_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'work_type': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.Textarea(attrs={'class': 'form-control address-input', 'rows': 3}),
@@ -21,7 +29,6 @@ class ContractForm(forms.ModelForm):
             'geodesist': forms.Select(attrs={'class': 'form-select'}),
             'cadastral_engineer': forms.Select(attrs={'class': 'form-select'}),
             'designer': forms.Select(attrs={'class': 'form-select'}),
-            'notification': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'priority': forms.Select(attrs={'class': 'form-select'}),
         }
@@ -37,7 +44,7 @@ class ContractForm(forms.ModelForm):
             'geodesist': 'Геодезист',
             'cadastral_engineer': 'Кадастровый инженер',
             'designer': 'Оформление',
-            'notification': 'Извещение',
+            'work_description': 'Описание работ',
             'status': 'Статус',
             'priority': 'Приоритет',
         }
@@ -56,12 +63,24 @@ class ContractForm(forms.ModelForm):
         self.fields['customer'].empty_label = 'Выберите заказчика'
         self.fields['completion_date'].required = False
         
-        # Простая установка дат
+        # Устанавливаем значения дат при редактировании
         if self.instance and self.instance.pk:
             if self.instance.date:
-                self.initial['date'] = self.instance.date
+                self.fields['date'].widget.attrs['value'] = self.instance.date.strftime('%Y-%m-%d')
             if self.instance.completion_date:
-                self.initial['completion_date'] = self.instance.completion_date
+                self.fields['completion_date'].widget.attrs['value'] = self.instance.completion_date.strftime('%Y-%m-%d')
+            
+            # Устанавливаем значение для одиночного выбора
+            if self.instance.work_description:
+                self.initial['work_description'] = self.instance.work_description
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Сохраняем выбранное значение как есть
+        instance.work_description = self.cleaned_data.get('work_description', '')
+        if commit:
+            instance.save()
+        return instance
 
 class EmployeeForm(forms.ModelForm):
     class Meta:

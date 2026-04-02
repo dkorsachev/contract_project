@@ -65,6 +65,16 @@
                             </label>
                             {{ form.completion_date }}
                             <div class="form-text small">Опционально</div>
+                            <!-- Кнопки для быстрой установки даты завершения -->
+                            <div class="mt-2">
+                                <small class="text-muted me-2">Быстрая установка:</small>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="setCompletionDate(20)">20 дн</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="setCompletionDate(30)">30 дн</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="setCompletionDate(60)">60 дн</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="setCompletionDate(90)">90 дн</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -111,7 +121,6 @@
         
         <!-- Правая колонка -->
         <div class="col-md-6">
-            <!-- Заказчик с КНОПКОЙ -->
             <!-- Заказчик -->
             <div class="card mb-3">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -123,13 +132,13 @@
                     <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="openCustomerModal()">
                         <i class="bi bi-plus-circle"></i>
                         <span class="small">добавить</span>
-                    </a>
+                    </button>
                 </div>
                 <div class="card-body">
                     {{ form.customer }}
                     <small class="text-muted d-block mt-1">
                         <i class="bi bi-info-circle"></i> 
-                        Нет нужного заказчика? Нажмите <span class="text-success">"добавить"</span> — откроется новая вкладка
+                        Нет нужного заказчика? Нажмите <span class="text-success" style="cursor: pointer;" onclick="openCustomerModal()">"добавить"</span> — откроется форма добавления
                     </small>
                 </div>
             </div>
@@ -169,15 +178,19 @@
             <div class="card mb-3">
                 <div class="card-header bg-light py-2">
                     <h6 class="mb-0">
-                        <i class="bi bi-envelope text-primary"></i> Дополнительно
+                        <i class="bi bi-list-check text-primary"></i> Дополнительно
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div class="mb-2">
-                        <label for="{{ form.notification.id_for_label }}" class="form-label fw-bold small">
-                            <i class="bi bi-envelope"></i> {{ form.notification.label }}
+                    <!-- Описание работ - выпадающий список -->
+                    <div class="mb-3">
+                        <label for="{{ form.work_description.id_for_label }}" class="form-label fw-bold small">
+                            <i class="bi bi-file-text"></i> {{ form.work_description.label }}
                         </label>
-                        {{ form.notification }}
+                        {{ form.work_description }}
+                        <div class="form-text small">
+                            Выберите тип работ: уточнение, образование, раздел, объединение, перераспределение, выдел
+                        </div>
                     </div>
                     
                     <div class="row g-2">
@@ -292,12 +305,54 @@
     .card .form-text:not(:first-of-type) {
         display: none;
     }
+    
+    /* Анимация для кнопок быстрой установки */
+    .btn-outline-secondary {
+        transition: all 0.2s;
+    }
+    
+    .btn-outline-secondary:hover {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: white;
+    }
 </style>
 
 <script>
+    // Функция для установки даты завершения
+    function setCompletionDate(days) {
+        const dateField = document.getElementById('id_date');
+        const completionField = document.getElementById('id_completion_date');
+        
+        if (!dateField.value) {
+            alert('Сначала выберите дату договора');
+            return;
+        }
+        
+        // Получаем дату договора
+        const startDate = new Date(dateField.value);
+        
+        // Добавляем указанное количество дней
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + days);
+        
+        // Форматируем дату в YYYY-MM-DD
+        const year = endDate.getFullYear();
+        const month = String(endDate.getMonth() + 1).padStart(2, '0');
+        const day = String(endDate.getDate()).padStart(2, '0');
+        
+        // Устанавливаем значение
+        completionField.value = `${year}-${month}-${day}`;
+        
+        // Добавляем визуальный эффект
+        completionField.style.backgroundColor = '#e8f5e9';
+        setTimeout(() => {
+            completionField.style.backgroundColor = '';
+        }, 500);
+    }
+    
     // Функция для открытия модального окна добавления заказчика
     function openCustomerModal() {
-        // Используем прямой URL вместо named URL
         const url = '/customers/create/';
         const title = 'Добавить заказчика';
         
@@ -319,7 +374,7 @@
         });
     }
     
-    // Функция для обновления списка заказчиков после добавления нового
+    // Функция для обновления списка заказчиков
     function refreshCustomerList() {
         $.ajax({
             url: '/customers/json/',
@@ -332,14 +387,17 @@
                 $.each(data.customers, function(index, customer) {
                     select.append('<option value="' + customer.id + '">' + customer.name + '</option>');
                 });
-                if (currentValue && data.customers.some(c => c.id == currentValue)) {
+                if (currentValue) {
                     select.val(currentValue);
                 }
+            },
+            error: function() {
+                console.error('Ошибка загрузки списка заказчиков');
             }
         });
     }
     
-    // Обработка успешного сохранения заказчика
+    // Обработка отправки формы
     $(document).on('submit', '#modal-form', function(e) {
         const form = $(this);
         const action = form.attr('action');
@@ -357,10 +415,8 @@
                 contentType: false,
                 success: function(response) {
                     if (response.status === 'success') {
-                        // Закрываем модальное окно
                         const modal = bootstrap.Modal.getInstance(document.getElementById('actionModal'));
                         modal.hide();
-                        // Обновляем список заказчиков
                         refreshCustomerList();
                     } else if (response.html) {
                         $('#actionModal .modal-body').html(response.html);
@@ -376,6 +432,7 @@
         }
     });
     
+    // Инициализация при загрузке
     $(document).ready(function() {
         // Убираем дублирующиеся подсказки
         $('.form-text').each(function() {
@@ -384,24 +441,40 @@
             }
         });
         
-        // Инициализация DaData для поля адреса
-        const addressField = $('#id_address');
-        if (addressField.length && typeof $.fn.suggestions !== 'undefined') {
-            addressField.suggestions({
-                token: 'YOUR_DADATA_API_KEY',
-                type: 'ADDRESS',
-                constraints: { locations: { country: 'Россия' } },
-                addClass: 'form-control form-control-sm'
-            });
+        // Принудительная установка дат
+        function setDateValue(fieldId, dateValue) {
+            const field = $(fieldId);
+            if (field.length && dateValue) {
+                let formattedDate = dateValue;
+                if (dateValue.includes('.')) {
+                    const parts = dateValue.split('.');
+                    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+                field.val(formattedDate);
+                console.log(`Установлена дата для ${fieldId}: ${formattedDate}`);
+            }
         }
+        
+        const dateFromAttr = $('#id_date').attr('value');
+        const completionFromAttr = $('#id_completion_date').attr('value');
+        
+        if (dateFromAttr && dateFromAttr !== '') {
+            setDateValue('#id_date', dateFromAttr);
+        }
+        
+        if (completionFromAttr && completionFromAttr !== '') {
+            setDateValue('#id_completion_date', completionFromAttr);
+        }
+        
+        // Инициализация DaData
+        initDaData();
     });
-
+    
     // Функция инициализации DaData
     function initDaData() {
         const addressField = document.getElementById('id_address');
         if (!addressField) return;
         
-        // Проверяем наличие jQuery и плагина
         if (typeof $ === 'undefined') {
             console.error('jQuery не загружен');
             return;
@@ -436,82 +509,4 @@
         
         console.log('DaData инициализирован успешно');
     }
-    
-    // Запускаем инициализацию после загрузки страницы
-    $(document).ready(function() {
-        initDaData();
-    });
-    
-    // Если форма загружается через AJAX, запускаем инициализацию снова
-    $(document).on('DOMNodeInserted', '#id_address', function() {
-        initDaData();
-    });
-
-    // Функция для обновления списка заказчиков после добавления нового
-    function refreshCustomerList() {
-        $.ajax({
-            url: '/customers/json/',
-            method: 'GET',
-            success: function(data) {
-                const select = $('#id_customer');
-                const currentValue = select.val();
-                select.empty();
-                select.append('<option value="">---------</option>');
-                $.each(data.customers, function(index, customer) {
-                    select.append('<option value="' + customer.id + '">' + customer.name + '</option>');
-                });
-                if (currentValue) {
-                    select.val(currentValue);
-                }
-            },
-            error: function() {
-                console.error('Ошибка загрузки списка заказчиков');
-            }
-        });
-    }
-    // Принудительная установка дат
-    $(document).ready(function() {
-        console.log('=== Проверка дат ===');
-        
-        // Функция установки даты
-        function setDateValue(fieldId, dateValue) {
-            const field = $(fieldId);
-            if (field.length && dateValue) {
-                // Форматируем дату в YYYY-MM-DD
-                let formattedDate = dateValue;
-                if (dateValue.includes('.')) {
-                    const parts = dateValue.split('.');
-                    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                }
-                field.val(formattedDate);
-                console.log(`Установлена дата для ${fieldId}: ${formattedDate}`);
-            }
-        }
-        
-        // Получаем даты из скрытых полей или из атрибутов
-        const dateFromAttr = $('#id_date').attr('value');
-        const completionFromAttr = $('#id_completion_date').attr('value');
-        
-        console.log('date attr value:', dateFromAttr);
-        console.log('completion attr value:', completionFromAttr);
-        
-        if (dateFromAttr && dateFromAttr !== '') {
-            setDateValue('#id_date', dateFromAttr);
-        }
-        
-        if (completionFromAttr && completionFromAttr !== '') {
-            setDateValue('#id_completion_date', completionFromAttr);
-        }
-        
-        // Если не установилось через attr, пробуем через data
-        if (!$('#id_date').val()) {
-            const dateText = $('input[name="date"]').data('value');
-            if (dateText) setDateValue('#id_date', dateText);
-        }
-        
-        if (!$('#id_completion_date').val()) {
-            const completionText = $('input[name="completion_date"]').data('value');
-            if (completionText) setDateValue('#id_completion_date', completionText);
-        }
-    });
 </script>

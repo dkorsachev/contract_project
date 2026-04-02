@@ -118,6 +118,7 @@
         </div>
     </div>
 </div>
+
 <!-- Поиск -->
 <div class="search-card mb-3">
     <form method="get" class="row g-2 align-items-end">
@@ -196,9 +197,9 @@
                 <label class="form-label small text-muted mb-0">Статус</label>
                 <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Все</option>
-                    {% for code, name in status_stats.items %}
+                    {% for code, stats in status_stats.items %}
                         <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>
-                            {{ name.name }}
+                            {{ stats.name }}
                         </option>
                     {% endfor %}
                 </select>
@@ -209,7 +210,7 @@
                 <label class="form-label small text-muted mb-0">Приоритет</label>
                 <select name="priority" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Все</option>
-                    {% for code, name in priority_colors.items %}
+                    {% for code, color in priority_colors.items %}
                         <option value="{{ code }}" {% if selected_priority == code %}selected{% endif %}>
                             {{ code|capfirst }}
                         </option>
@@ -244,7 +245,7 @@
                 <th>Геодезист</th>
                 <th>Кад. инженер</th>
                 <th>Оформление</th>
-                <th>Извещение</th>
+                <th>Описание работ</th>
                 <th>Статус</th>
                 <th>Приоритет</th>
                 <th style="width: 80px">Действия</th>
@@ -260,17 +261,23 @@
                 <td>{{ contract.completion_date|date:"d.m.Y"|default:"—" }}</td>
                 <td class="text-nowrap">{{ contract.amount|floatformat:2 }} ₽</td>
                 <td>{{ contract.get_work_type_display }}</td>
-                <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" 
+                <td style="min-width: 250px; max-width: 350px; word-wrap: break-word; white-space: normal;" 
                     title="{{ contract.address }}">
-                    {{ contract.address|truncatechars:25 }}
+                    {{ contract.address|default:"—" }}
                 </td>
                 <td>{{ contract.customer.name }}</td>
                 <td>{{ contract.geodesist|default:"—" }}</td>
                 <td>{{ contract.cadastral_engineer|default:"—" }}</td>
                 <td>{{ contract.designer|default:"—" }}</td>
-                <td style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                    title="{{ contract.notification }}">
-                    {{ contract.notification|truncatechars:15|default:"—" }}
+                <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                    title="{{ contract.get_work_description_display }}">
+                    {% if contract.work_description %}
+                        <span class="badge bg-secondary">
+                            {{ contract.get_work_description_display }}
+                        </span>
+                    {% else %}
+                        —
+                    {% endif %}
                 </td>
                 <td>
                     <span class="status-badge status-{{ contract.status }}" style="font-size: 0.75rem; padding: 3px 8px;">
@@ -287,7 +294,9 @@
                         <button class="btn btn-outline-warning btn-sm" onclick="openModal('{% url 'contracts:contract_edit' contract.pk %}', 'Редактирование договора')" title="Редактировать">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="openModal('{% url 'contracts:contract_delete' contract.pk %}', 'Удаление договора')" title="Удалить">
+                        <button class="btn btn-outline-danger btn-sm" 
+                                onclick="openModal('{% url 'contracts:contract_delete' contract.pk %}', 'Удаление договора')" 
+                                title="Удалить">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -357,4 +366,38 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+    // Функция для сворачивания/разворачивания статистики
+    function toggleStatsCard() {
+        const card = document.getElementById('statsCard');
+        const icon = document.getElementById('statsToggleIcon');
+        const content = card.querySelector('.stats-content');
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.classList.remove('bi-chevron-down');
+            icon.classList.add('bi-chevron-up');
+            localStorage.setItem('statsCardCollapsed', 'false');
+        } else {
+            content.style.display = 'none';
+            icon.classList.remove('bi-chevron-up');
+            icon.classList.add('bi-chevron-down');
+            localStorage.setItem('statsCardCollapsed', 'true');
+        }
+    }
+    
+    // При загрузке страницы восстанавливаем состояние статистики
+    document.addEventListener('DOMContentLoaded', function() {
+        const isCollapsed = localStorage.getItem('statsCardCollapsed') === 'true';
+        const content = document.querySelector('#statsCard .stats-content');
+        const icon = document.getElementById('statsToggleIcon');
+        
+        if (isCollapsed && content) {
+            content.style.display = 'none';
+            icon.classList.remove('bi-chevron-up');
+            icon.classList.add('bi-chevron-down');
+        }
+    });
+</script>
 {% endblock %}
