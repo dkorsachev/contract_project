@@ -128,6 +128,10 @@ class Contract(models.Model):
     # История изменений (django-simple-history)
     history = HistoricalRecords()
 
+    note = models.TextField(blank=True, verbose_name='Примечание')
+    note_created_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата создания примечания')
+    note_updated_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата обновления примечания')
+
     def get_work_description_display(self):
         """Возвращает отображаемое название выбранной работы"""
         if self.work_description:

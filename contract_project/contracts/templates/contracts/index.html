@@ -8,7 +8,7 @@
         <i class="bi bi-file-text"></i> Договоры
         <span class="badge bg-secondary ms-2" style="font-size: 0.75rem;">{{ page_obj.paginator.count }}</span>
     </h1>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <a href="{% url 'contracts:dashboard' %}" class="btn btn-outline-info btn-sm">
             <i class="bi bi-speedometer2"></i> Дашборд
         </a>
@@ -21,10 +21,8 @@
         <a href="{% url 'contracts:employee_list' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-people"></i> Сотрудники
         </a>
-        <button class="btn btn-primary btn-sm" 
-            data-url="{% url 'contracts:contract_create' %}" 
-            onclick="openModal(this.getAttribute('data-url'), 'Создание договора')">
-        <i class="bi bi-plus-lg"></i> Новый договор
+        <button class="btn btn-primary btn-sm" onclick="openModal('/create/', 'Создание договора')">
+            <i class="bi bi-plus-lg"></i> Новый договор
         </button>
     </div>
 </div>
@@ -113,75 +111,24 @@
     </div>
 </div>
 
-<!-- Поиск -->
-<div class="search-card mb-3">
-    <form method="get" class="row g-2 align-items-end" id="searchForm">
-        <div class="col-md-10">
-            <label class="form-label text-muted small mb-1">Поиск по всем полям</label>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-white">
-                    <i class="bi bi-search"></i>
-                </span>
-                <input type="text" name="q" class="form-control form-control-sm" 
-                       placeholder="Номер договора, заказчик, адрес, сотрудник..." 
-                       value="{{ search_query }}">
-                {% if search_query %}
-                    <a href="{% url 'contracts:contract_list' %}" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-x-lg"></i> Очистить
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary btn-sm w-100">
-                <i class="bi bi-search"></i> Найти
-            </button>
-        </div>
-    </form>
-</div>
-
-<!-- Фильтры и сортировка -->
+<!-- Поиск и фильтры -->
 <div class="card mb-3">
     <div class="card-body py-2">
-        <form method="get" class="row g-2 align-items-end">
+        <form method="get" class="row g-2 align-items-end" id="filterForm">
             {% if search_query %}
                 <input type="hidden" name="q" value="{{ search_query }}">
             {% endif %}
             
-            <div class="col-md-2">
-                <label class="form-label small text-muted mb-0">Геодезист</label>
-                <select name="geodesist" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">Все</option>
-                    {% for emp in geodesists %}
-                        <option value="{{ emp.id }}" {% if selected_geodesist|stringformat:"s" == emp.id|stringformat:"s" %}selected{% endif %}>
-                            {{ emp.full_name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-2">
-                <label class="form-label small text-muted mb-0">Кад. инженер</label>
-                <select name="cadastral_engineer" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">Все</option>
-                    {% for emp in engineers %}
-                        <option value="{{ emp.id }}" {% if selected_engineer|stringformat:"s" == emp.id|stringformat:"s" %}selected{% endif %}>
-                            {{ emp.full_name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="col-md-2">
-                <label class="form-label small text-muted mb-0">Оформление</label>
-                <select name="designer" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">Все</option>
-                    {% for emp in designers %}
-                        <option value="{{ emp.id }}" {% if selected_designer|stringformat:"s" == emp.id|stringformat:"s" %}selected{% endif %}>
-                            {{ emp.full_name }}
-                        </option>
-                    {% endfor %}
-                </select>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-0">Поиск</label>
+                <div class="input-group input-group-sm">
+                    <input type="text" name="q" class="form-control" 
+                           placeholder="Номер, заказчик, адрес..." 
+                           value="{{ search_query }}">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
             </div>
             
             <div class="col-md-2">
@@ -208,125 +155,142 @@
                 </select>
             </div>
             
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <label class="form-label small text-muted mb-0">Сортировка</label>
                 <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="-date" {% if sort_by == '-date' %}selected{% endif %}>📅 Новые сверху</option>
-                    <option value="date" {% if sort_by == 'date' %}selected{% endif %}>📅 Старые сверху</option>
-                    <option value="-completion_date" {% if sort_by == '-completion_date' %}selected{% endif %}>📅 Дата завершения (новые)</option>
-                    <option value="completion_date" {% if sort_by == 'completion_date' %}selected{% endif %}>📅 Дата завершения (старые)</option>
-                    <option value="-amount" {% if sort_by == '-amount' %}selected{% endif %}>💰 Сумма (по убыванию)</option>
-                    <option value="amount" {% if sort_by == 'amount' %}selected{% endif %}>💰 Сумма (по возрастанию)</option>
-                    <option value="number" {% if sort_by == 'number' %}selected{% endif %}>🔢 Номер (А-Я)</option>
-                    <option value="-number" {% if sort_by == '-number' %}selected{% endif %}>🔢 Номер (Я-А)</option>
-                    <option value="customer" {% if sort_by == 'customer' %}selected{% endif %}>🏢 Заказчик (А-Я)</option>
-                    <option value="-customer" {% if sort_by == '-customer' %}selected{% endif %}>🏢 Заказчик (Я-А)</option>
-                    <option value="status" {% if sort_by == 'status' %}selected{% endif %}>📊 Статус (А-Я)</option>
-                    <option value="-status" {% if sort_by == '-status' %}selected{% endif %}>📊 Статус (Я-А)</option>
-                    <option value="priority" {% if sort_by == 'priority' %}selected{% endif %}>⭐ Приоритет (А-Я)</option>
-                    <option value="-priority" {% if sort_by == '-priority' %}selected{% endif %}>⭐ Приоритет (Я-А)</option>
+                    <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>🕐 Новые сверху</option>
+                    <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>🕐 Старые сверху</option>
+                    <option value="-date" {% if sort_by == '-date' %}selected{% endif %}>📅 По дате договора (новые)</option>
+                    <option value="date" {% if sort_by == 'date' %}selected{% endif %}>📅 По дате договора (старые)</option>
+                    <option value="-amount" {% if sort_by == '-amount' %}selected{% endif %}>💰 По сумме (убывание)</option>
+                    <option value="amount" {% if sort_by == 'amount' %}selected{% endif %}>💰 По сумме (возрастание)</option>
                 </select>
+            </div>
+            
+            <div class="col-md-2">
+                <a href="{% url 'contracts:contract_list' %}" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-x-circle"></i> Сбросить
+                </a>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Таблица договоров -->
-<div class="table-responsive-custom">
-    <table class="table table-hover align-middle table-sm">
-        <thead class="table-dark">
-            <tr style="font-size: 0.85rem;">
-                <th style="width: 50px">№</th>
-                <th>Номер договора</th>
-                <th>Вид договора</th>
-                <th>Дата договора</th>
-                <th>Дата завершения</th>
-                <th>Сумма</th>
-                <th>Вид работ</th>
-                <th>Адрес</th>
-                <th>Заказчик</th>
-                <th>Геодезист</th>
-                <th>Кад. инженер</th>
-                <th>Оформление</th>
-                <th>Описание работ</th>
-                <th>Статус</th>
-                <th>Приоритет</th>
-                <th style="width: 80px">Действия</th>
-            </tr>
-        </thead>
-        <tbody style="font-size: 0.85rem;">
-            {% for contract in contracts %}
-            <tr>
-                <td class="fw-bold text-muted">{{ forloop.counter0|add:page_obj.start_index }}</td>
-                <td><strong>{{ contract.number }}</strong></td>
-                <td>{{ contract.get_contract_type_display }}</td>
-                <td>{{ contract.date|date:"d.m.Y" }}</td>
-                <td>{{ contract.completion_date|date:"d.m.Y"|default:"—" }}</td>
-                <td class="text-nowrap">{{ contract.amount|floatformat:2 }} ₽</td>
-                <td>{{ contract.get_work_type_display }}</td>
-                <td style="min-width: 250px; max-width: 350px; word-wrap: break-word; white-space: normal; line-height: 1.3;">
-                    {{ contract.address|default:"—" }}
-                </td>
-                <td>{{ contract.customer.name }}</td>
-                <td>{{ contract.geodesist|default:"—" }}</td>
-                <td>{{ contract.cadastral_engineer|default:"—" }}</td>
-                <td>{{ contract.designer|default:"—" }}</td>
-                <td style="max-width: 150px;">
-                    {% if contract.work_description %}
-                        <span class="badge bg-secondary">
-                            {{ contract.get_work_description_display }}
-                        </span>
-                    {% else %}
-                        —
-                    {% endif %}
-                </td>
-                <td>
-                    <span class="status-badge status-{{ contract.status }}" style="font-size: 0.75rem; padding: 3px 8px;">
-                        {{ contract.get_status_display }}
-                    </span>
-                </td>
-                <td>
-                    <span class="badge-priority badge bg-{{ priority_colors|get_item:contract.priority }}" style="font-size: 0.75rem; padding: 3px 8px;">
+<!-- Карточки договоров -->
+<div class="row g-3">
+    {% for contract in contracts %}
+    <div class="col-md-6 col-xl-4 col-xxl-3">
+        <div class="card contract-card h-100 shadow-sm priority-{{ contract.priority }}" onclick="showContractDetails({{ contract.id }})" style="cursor: pointer;">
+            <!-- Заголовок с номером договора -->
+            <div class="card-header bg-white d-flex justify-content-between align-items-start">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="contract-number-badge">
+                        <i class="bi bi-file-text me-1"></i>
+                        <strong>{{ contract.number }}</strong>
+                    </div>
+                    <span class="badge bg-{{ priority_colors|get_item:contract.priority }} opacity-75">
                         {{ contract.get_priority_display }}
                     </span>
-                </td>
-                <td>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-warning btn-sm" 
-                                data-url="{% url 'contracts:contract_edit' contract.pk %}" 
-                                onclick="openModal(this.getAttribute('data-url'), 'Редактирование договора')" 
-                                title="Редактировать">
+                </div>
+                <div class="btn-group btn-group-sm" onclick="event.stopPropagation()">
+                    <button class="btn btn-outline-warning" onclick="openModal('/{{ contract.pk }}/edit/', 'Редактирование договора')" title="Редактировать">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="openModal('/{{ contract.pk }}/delete/', 'Удаление договора')" title="Удалить">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Заказчик -->
+                <div class="customer-section mb-2">
+                    <small class="text-muted text-uppercase">Заказчик</small>
+                    <div class="fw-bold fs-6" title="{{ contract.customer.name }}">{{ contract.customer.name|truncatechars:35 }}</div>
+                </div>
+                
+                <!-- Вид работ -->
+                <div class="mb-2">
+                    <small class="text-muted">Вид работ</small>
+                    <div><i class="bi bi-tools me-1"></i> {{ contract.get_work_type_display }}</div>
+                </div>
+                
+                <!-- Адрес (полностью) -->
+                <div class="address-section mb-2">
+                    <small class="text-muted text-uppercase">Адрес</small>
+                    <div class="address-text" title="{{ contract.address }}">
+                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                        {{ contract.address|default:"—" }}
+                    </div>
+                </div>
+
+                <!-- Примечание (компактное) -->
+                <div class="note-section mt-2 pt-1 border-top">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <small class="text-muted">
+                            <i class="bi bi-pencil-square"></i> Примечание
+                        </small>
+                        <button class="btn btn-sm btn-link text-primary p-0" onclick="editNote({{ contract.id }}, event)" title="Редактировать примечание">
                             <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-outline-danger btn-sm" 
-                                data-url="{% url 'contracts:contract_delete' contract.pk %}" 
-                                onclick="openModal(this.getAttribute('data-url'), 'Удаление договора')" 
-                                title="Удалить">
-                            <i class="bi bi-trash"></i>
+                            <small>добавить</small>
                         </button>
                     </div>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="16" class="text-center py-4">
-                    <i class="bi bi-inbox fs-4 text-muted"></i>
-                    <p class="text-muted mt-2 mb-0 small">Нет договоров</p>
-                    <button class="btn btn-primary btn-sm mt-2" 
-                            data-url="{% url 'contracts:contract_create' %}" 
-                            onclick="openModal(this.getAttribute('data-url'), 'Создание договора')">
-                        <i class="bi bi-plus-lg"></i> Создать первый договор
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    <div class="note-content" id="note-content-{{ contract.id }}">
+                        {% if contract.note %}
+                            <div class="note-text small" title="{{ contract.note }}">
+                                <i class="bi bi-chat-dots me-1"></i>
+                                {{ contract.note|truncatechars:60 }}
+                            </div>
+                            <div class="note-meta">
+                                <small class="text-muted" style="font-size: 0.6rem;">
+                                    <i class="bi bi-clock-history"></i>
+                                    {% if contract.note_updated_at %}
+                                        {{ contract.note_updated_at|date:"d.m.Y H:i" }}
+                                    {% elif contract.note_created_at %}
+                                        {{ contract.note_created_at|date:"d.m.Y H:i" }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        {% else %}
+                            <div class="note-placeholder text-muted small">
+                                <i class="bi bi-chat"></i> Нет примечания
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Статус -->
+                <div class="mt-2 pt-1">
+                    <span class="status-badge status-{{ contract.status }}">
+                        {{ contract.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Подсказка о клике -->
+            <div class="card-footer bg-white text-center py-2">
+                <small class="text-muted">
+                    <i class="bi bi-hand-index-thumb"></i> Нажмите для подробной информации
+                </small>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted"></i>
+            <p class="text-muted mt-2">Нет договоров</p>
+            <button class="btn btn-primary btn-sm" onclick="openModal('/create/', 'Создание договора')">
+                <i class="bi bi-plus-lg"></i> Создать первый договор
+            </button>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
 <!-- Пагинация -->
 {% if is_paginated %}
-<nav class="mt-3">
+<nav class="mt-4">
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
             <li class="page-item">
@@ -385,5 +349,318 @@
             icon.classList.add('bi-chevron-down');
         }
     });
+
+      // Функция для отображения деталей договора
+    function showContractDetails(contractId) {
+        const modal = new bootstrap.Modal(document.getElementById('contractDetailsModal'));
+        const contentDiv = document.getElementById('contractDetailsContent');
+        
+        contentDiv.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+                <p class="mt-2 small text-muted">Загрузка деталей...</p>
+            </div>
+        `;
+        
+        modal.show();
+        
+        fetch(`/contract/${contractId}/details/`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Полученные данные:', data);
+                
+                // Проверяем, что данные получены (успешный ответ всегда содержит status поле)
+                if (data && data.id) {
+                    contentDiv.innerHTML = `
+                        <div class="contract-details">
+                            <!-- Основное -->
+                            <div class="detail-group mb-2">
+                                <div class="detail-row">
+                                    <span class="detail-label">Номер:</span>
+                                    <span class="detail-value fw-bold">${data.number}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Заказчик:</span>
+                                    <span class="detail-value">${data.customer_name}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Сумма:</span>
+                                    <span class="detail-value text-success fw-bold">${data.amount} ₽</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Даты -->
+                            <div class="detail-group mb-2">
+                                <div class="detail-row">
+                                    <span class="detail-label">Дата договора:</span>
+                                    <span class="detail-value">${data.date}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Дата завершения:</span>
+                                    <span class="detail-value">${data.completion_date || '—'}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Адрес -->
+                            <div class="detail-group mb-2">
+                                <div class="detail-row">
+                                    <span class="detail-label">Адрес:</span>
+                                    <span class="detail-value">${data.address}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Работы -->
+                            <div class="detail-group mb-2">
+                                <div class="detail-row">
+                                    <span class="detail-label">Вид работ:</span>
+                                    <span class="detail-value">${data.work_type}</span>
+                                </div>
+                                ${data.work_description ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">Описание:</span>
+                                    <span class="detail-value"><span class="badge bg-secondary">${data.work_description}</span></span>
+                                </div>
+                                ` : ''}
+                            </div>
+                            
+                            <!-- Статус и приоритет -->
+                            <div class="detail-group mb-2">
+                                <div class="detail-row">
+                                    <span class="detail-label">Статус:</span>
+                                    <span class="detail-value"><span class="status-badge status-${data.status_code}">${data.status}</span></span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Приоритет:</span>
+                                    <span class="detail-value">
+                                        <span class="badge ${data.priority_color === 'critical' ? 'bg-danger' : data.priority_color === 'urgent' ? 'bg-warning text-dark' : data.priority_color === 'normal' ? 'bg-primary' : data.priority_color === 'relax' ? 'bg-success' : 'bg-secondary'}">
+                                            ${data.priority}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Сотрудники -->
+                            <div class="detail-group mb-2">
+                                <div class="detail-row">
+                                    <span class="detail-label">Геодезист:</span>
+                                    <span class="detail-value">${data.geodesist || '—'}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Кад. инженер:</span>
+                                    <span class="detail-value">${data.cadastral_engineer || '—'}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Оформление:</span>
+                                    <span class="detail-value">${data.designer || '—'}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Информация о создании -->
+                            <div class="detail-group mt-2 pt-1 border-top">
+                                <div class="detail-row">
+                                    <span class="detail-label small">Создан:</span>
+                                    <span class="detail-value small text-muted">${data.created_at}</span>
+                                </div>
+                                ${data.updated_at ? `
+                                <div class="detail-row">
+                                    <span class="detail-label small">Изменен:</span>
+                                    <span class="detail-value small text-muted">${data.updated_at}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+                else {
+                    contentDiv.innerHTML = `
+                        <div class="alert alert-danger text-center py-3 mb-0">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            ${data.message || 'Ошибка загрузки деталей договора'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                contentDiv.innerHTML = `
+                    <div class="alert alert-danger text-center py-3 mb-0">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        Ошибка загрузки деталей договора
+                    </div>
+                `;
+            });
+    }
+    // Функция для редактирования примечания
+    function editNote(contractId, event) {
+        event.stopPropagation();
+        
+        const noteDiv = document.getElementById(`note-content-${contractId}`);
+        const currentNote = noteDiv.querySelector('.note-text')?.innerText.replace(/[^\w\sа-яА-ЯёЁ\d\.,;:!?\- ]/g, '').trim() || '';
+        
+        const modalHtml = `
+            <div class="modal fade" id="noteModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white py-2">
+                            <h6 class="modal-title">
+                                <i class="bi bi-pencil-square"></i> Примечание
+                            </h6>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-3">
+                            <textarea id="noteText" class="form-control form-control-sm" rows="3" placeholder="Введите примечание...">${currentNote}</textarea>
+                            <small class="text-muted d-block mt-2" style="font-size: 0.65rem;">
+                                <i class="bi bi-info-circle"></i> Максимум 200 символов
+                            </small>
+                        </div>
+                        <div class="modal-footer py-2">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="saveNote(${contractId})">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Удаляем существующее модальное окно
+        const existingModal = document.getElementById('noteModal');
+        if (existingModal) existingModal.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        const modal = new bootstrap.Modal(document.getElementById('noteModal'));
+        modal.show();
+        
+        document.getElementById('noteModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+
+    // Функция для сохранения примечания
+    function saveNote(contractId) {
+        const noteText = document.getElementById('noteText').value;
+        
+        // Ограничение длины
+        if (noteText.length > 200) {
+            alert('Примечание не может быть длиннее 200 символов');
+            return;
+        }
+        
+        fetch(`/contract/${contractId}/update-note/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ note: noteText })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Закрываем модальное окно
+                const modal = bootstrap.Modal.getInstance(document.getElementById('noteModal'));
+                modal.hide();
+                
+                // Обновляем отображение примечания в карточке
+                updateNoteDisplay(contractId, data);
+            } else {
+                alert('Ошибка при сохранении примечания');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Ошибка при сохранении примечания');
+        });
+    }
+
+    // Функция обновления отображения примечания
+    function updateNoteDisplay(contractId, data) {
+        const noteContent = document.getElementById(`note-content-${contractId}`);
+        
+        if (data.note) {
+            const truncatedNote = data.note.length > 60 ? data.note.substring(0, 60) + '...' : data.note;
+            const dateInfo = data.note_updated_at || data.note_created_at;
+            
+            noteContent.innerHTML = `
+                <div class="note-text small" title="${data.note.replace(/"/g, '&quot;')}">
+                    <i class="bi bi-chat-dots me-1"></i>
+                    ${escapeHtml(truncatedNote)}
+                </div>
+                <div class="note-meta">
+                    <small class="text-muted" style="font-size: 0.6rem;">
+                        <i class="bi bi-clock-history"></i> ${dateInfo}
+                    </small>
+                </div>
+            `;
+        } else {
+            noteContent.innerHTML = `
+                <div class="note-placeholder text-muted small">
+                    <i class="bi bi-chat"></i> Нет примечания
+                </div>
+            `;
+        }
+    }
+
+    // Функция escapeHtml для безопасности
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Функция getCookie для CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    // Функция для получения класса бейджа приоритета
+    function getPriorityBadgeClass(priority) {
+        const classes = {
+            'critical': 'bg-danger',
+            'urgent': 'bg-warning text-dark',
+            'normal': 'bg-primary',
+            'relax': 'bg-success'
+        };
+        return classes[priority] || 'bg-secondary';
+    }
 </script>
+
+<!-- Модальное окно для деталей договора -->
+<div class="modal fade" id="contractDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title">
+                    <i class="bi bi-file-text"></i> Детали договора
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3" id="contractDetailsContent" style="max-height: 70vh; overflow-y: auto;">
+                <div class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-2 small text-muted">Загрузка...</p>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -23,7 +23,7 @@ class ContractListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         
-        # Поиск по тексту
+        # Поиск
         q = self.request.GET.get('q', '')
         if q:
             queryset = queryset.filter(
@@ -39,9 +39,8 @@ class ContractListView(LoginRequiredMixin, ListView):
                 Q(cadastral_engineer__full_name__icontains=q) |
                 Q(designer__full_name__icontains=q)
             )
-        # Убираем return - он не должен быть здесь!
         
-        # Фильтры по сотрудникам
+        # Фильтры
         geodesist_id = self.request.GET.get('geodesist')
         if geodesist_id:
             queryset = queryset.filter(geodesist_id=geodesist_id)
@@ -54,7 +53,6 @@ class ContractListView(LoginRequiredMixin, ListView):
         if designer_id:
             queryset = queryset.filter(designer_id=designer_id)
         
-        # Фильтры по статусу и приоритету
         status = self.request.GET.get('status')
         if status:
             queryset = queryset.filter(status=status)
@@ -63,44 +61,49 @@ class ContractListView(LoginRequiredMixin, ListView):
         if priority:
             queryset = queryset.filter(priority=priority)
 
-        # СОРТИРОВКА - расширенная
-        sort_by = self.request.GET.get('sort', '-date')
+        # СОРТИРОВКА
+        sort_by = self.request.GET.get('sort', '-created_at')
         
-        # Карта допустимых полей для сортировки
-        sort_fields = {
-            'number': 'number',
-            '-number': '-number',
-            'date': 'date',
-            '-date': '-date',
-            'completion_date': 'completion_date',
-            '-completion_date': '-completion_date',
-            'amount': 'amount',
-            '-amount': '-amount',
-            'customer': 'customer__name',
-            '-customer': '-customer__name',
-            'status': 'status',
-            '-status': '-status',
-            'priority': 'priority',
-            '-priority': '-priority',
-            'work_description': 'work_description',
-            '-work_description': '-work_description',
-            'work_type': 'work_type',
-            '-work_type': '-work_type',
-            'contract_type': 'contract_type',
-            '-contract_type': '-contract_type',
-        }
+        print(f"Сортировка: {sort_by}")  # Отладка в консоли
         
-        if sort_by in sort_fields:
-            queryset = queryset.order_by(sort_fields[sort_by])
-        else:
+        # Простая сортировка
+        if sort_by == 'created_at':
+            queryset = queryset.order_by('created_at')
+        elif sort_by == '-created_at':
+            queryset = queryset.order_by('-created_at')
+        elif sort_by == 'date':
+            queryset = queryset.order_by('date')
+        elif sort_by == '-date':
             queryset = queryset.order_by('-date')
+        elif sort_by == 'number':
+            queryset = queryset.order_by('number')
+        elif sort_by == '-number':
+            queryset = queryset.order_by('-number')
+        elif sort_by == 'amount':
+            queryset = queryset.order_by('amount')
+        elif sort_by == '-amount':
+            queryset = queryset.order_by('-amount')
+        elif sort_by == 'status':
+            queryset = queryset.order_by('status')
+        elif sort_by == '-status':
+            queryset = queryset.order_by('-status')
+        elif sort_by == 'priority':
+            queryset = queryset.order_by('priority')
+        elif sort_by == '-priority':
+            queryset = queryset.order_by('-priority')
+        elif sort_by == 'customer':
+            queryset = queryset.order_by('customer__name')
+        elif sort_by == '-customer':
+            queryset = queryset.order_by('-customer__name')
+        else:
+            queryset = queryset.order_by('-created_at')  # По умолчанию новые сверху
         
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '')
-        context['sort_by'] = self.request.GET.get('sort', '-date')
+        context['sort_by'] = self.request.GET.get('sort', '-created_at')
         context['priority_colors'] = {
             'relax': 'success',
             'normal': 'primary',
@@ -108,7 +111,7 @@ class ContractListView(LoginRequiredMixin, ListView):
             'critical': 'danger',
         }
         
-        # Статистика для отфильтрованных договоров
+        # Статистика
         filtered_queryset = self.get_queryset()
         total_sum = filtered_queryset.aggregate(total=Sum('amount'))['total'] or 0
         completed_sum = filtered_queryset.filter(status='completed').aggregate(total=Sum('amount'))['total'] or 0
@@ -131,61 +134,12 @@ class ContractListView(LoginRequiredMixin, ListView):
         context['engineers'] = Employee.objects.filter(position='cadastral_engineer')
         context['designers'] = Employee.objects.filter(position='designer')
         
-        # Выбранные значения фильтров
+        # Выбранные значения
         context['selected_geodesist'] = self.request.GET.get('geodesist', '')
         context['selected_engineer'] = self.request.GET.get('cadastral_engineer', '')
         context['selected_designer'] = self.request.GET.get('designer', '')
         context['selected_status'] = self.request.GET.get('status', '')
         context['selected_priority'] = self.request.GET.get('priority', '')
-        
-        return context
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        
-        # Получаем отфильтрованный queryset для статистики
-        filtered_queryset = self.get_queryset()
-        
-        # Общая сумма отфильтрованных договоров
-        total_sum = filtered_queryset.aggregate(total=Sum('amount'))['total'] or 0
-        
-        # Сумма выполненных в отфильтрованном списке
-        completed_sum = filtered_queryset.filter(status='completed').aggregate(
-            total=Sum('amount')
-        )['total'] or 0
-        
-        # Статистика по статусам для отфильтрованного списка
-        status_stats = {}
-        for status_code, status_name in Contract.STATUS_CHOICES:
-            status_stats[status_code] = {
-                'name': status_name,
-                'count': filtered_queryset.filter(status=status_code).count(),
-                'sum': filtered_queryset.filter(status=status_code).aggregate(total=Sum('amount'))['total'] or 0
-            }
-        
-        context['search_query'] = self.request.GET.get('q', '')
-        context['priority_colors'] = {
-            'relax': 'success',
-            'normal': 'primary',
-            'urgent': 'warning',
-            'critical': 'danger',
-        }
-        context['total_sum'] = total_sum
-        context['completed_sum'] = completed_sum
-        context['status_stats'] = status_stats
-        
-        # Передаем выбранные значения фильтров для сохранения в форме
-        context['selected_geodesist'] = self.request.GET.get('geodesist', '')
-        context['selected_engineer'] = self.request.GET.get('cadastral_engineer', '')
-        context['selected_designer'] = self.request.GET.get('designer', '')
-        context['selected_status'] = self.request.GET.get('status', '')
-        context['selected_priority'] = self.request.GET.get('priority', '')
-        
-        # Списки для выпадающих списков
-        from .models import Employee
-        context['geodesists'] = Employee.objects.filter(position='geodesist')
-        context['engineers'] = Employee.objects.filter(position='cadastral_engineer')
-        context['designers'] = Employee.objects.filter(position='designer')
         
         return context
   
@@ -584,3 +538,69 @@ def dashboard(request):
     }
     
     return render(request, 'contracts/dashboard.html', context)
+
+@login_required
+def contract_details(request, pk):
+    """Возвращает детали договора в формате JSON"""
+    try:
+        contract = get_object_or_404(Contract, pk=pk)
+        
+        data = {
+            'status': 'success',
+            'id': contract.id,
+            'number': contract.number,
+            'contract_type': contract.get_contract_type_display(),
+            'date': contract.date.strftime('%d.%m.%Y'),
+            'completion_date': contract.completion_date.strftime('%d.%m.%Y') if contract.completion_date else None,
+            'amount': f'{contract.amount:,.2f}'.replace(',', ' '),
+            'address': contract.address,
+            'work_type': contract.get_work_type_display(),
+            'work_description': contract.get_work_description_display() if contract.work_description else None,
+            'status': contract.get_status_display(),
+            'status_code': contract.status,
+            'priority': contract.get_priority_display(),
+            'priority_color': contract.priority,
+            'customer_name': contract.customer.name,
+            'customer_inn': contract.customer.inn if hasattr(contract.customer, 'inn') else '',
+            'customer_phone': contract.customer.phone if hasattr(contract.customer, 'phone') else '',
+            'customer_email': contract.customer.email if hasattr(contract.customer, 'email') else '',
+            'geodesist': contract.geodesist.full_name if contract.geodesist else None,
+            'cadastral_engineer': contract.cadastral_engineer.full_name if contract.cadastral_engineer else None,
+            'designer': contract.designer.full_name if contract.designer else None,
+            'created_at': contract.created_at.strftime('%d.%m.%Y %H:%M'),
+            'updated_at': contract.updated_at.strftime('%d.%m.%Y %H:%M') if contract.updated_at else None,
+        }
+        
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+def update_note(request, pk):
+    """Обновление примечания договора"""
+    contract = get_object_or_404(Contract, pk=pk)
+    
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+        note_text = data.get('note', '')
+        
+        contract.note = note_text
+        if note_text:
+            if not contract.note_created_at:
+                contract.note_created_at = timezone.now()
+            contract.note_updated_at = timezone.now()
+        else:
+            contract.note_created_at = None
+            contract.note_updated_at = None
+        
+        contract.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'note': contract.note,
+            'note_created_at': contract.note_created_at.strftime('%d.%m.%Y %H:%M') if contract.note_created_at else None,
+            'note_updated_at': contract.note_updated_at.strftime('%d.%m.%Y %H:%M') if contract.note_updated_at else None,
+        })
+    
+    return JsonResponse({'status': 'error'}, status=400)

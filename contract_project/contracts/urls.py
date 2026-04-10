@@ -22,4 +22,6 @@ urlpatterns = [
     path('customers/<int:pk>/delete/', views.customer_delete, name='customer_delete'),
     path('customers/json/', views.get_customers_json, name='get_customers_json'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('contract/<int:pk>/details/', views.contract_details, name='contract_details'),
+    path('contract/<int:pk>/update-note/', views.update_note, name='update_note'),
 ]

@@ -17,303 +17,507 @@
     <link href="https://cdn.jsdelivr.net/npm/suggestions-jquery@20.3.0/dist/css/suggestions.min.css" rel="stylesheet" />
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        html, body {
-            height: 100%;
-            width: 100%;
-            overflow-x: hidden;
-        }
-        
-        body {
-            background-color: #f8f9fa;
-            display: flex;
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    html, body {
+        height: 100%;
+        width: 100%;
+        overflow-x: hidden;
+    }
+    
+    body {
+        background-color: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        font-size: 0.85rem;
+    }
+    
+    /* Навигация */
+    .navbar {
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        font-size: 0.9rem;
+    }
+    
+    /* Основной контент */
+    .main-content {
+        flex: 1;
+        padding: 15px 0;
+        overflow-y: auto;
+    }
+    
+    /* Контейнер */
+    .container-fluid-custom {
+        width: 100%;
+        padding-right: 20px;
+        padding-left: 20px;
+        margin-right: auto;
+        margin-left: auto;
+    }
+    
+    /* ========== СТИЛИ ДЛЯ КАРТОЧЕК ДОГОВОРОВ ========== */
+    .contract-card {
+        transition: all 0.3s ease;
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        background: white;
+        position: relative;
+    }
+
+    /* Цветовые маркеры для карточек */
+    .contract-card.priority-critical {
+        border-left: 4px solid #dc3545;
+        background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+    }
+    .contract-card.priority-urgent {
+        border-left: 4px solid #fd7e14;
+        background: linear-gradient(135deg, #fff 0%, #fff8f0 100%);
+    }
+    .contract-card.priority-normal {
+        border-left: 4px solid #0d6efd;
+        background: linear-gradient(135deg, #fff 0%, #f0f7ff 100%);
+    }
+    .contract-card.priority-relax {
+        border-left: 4px solid #28a745;
+        background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);
+    }
+
+    /* Номер договора */
+    .contract-number-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .contract-card .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 12px 16px;
+        background: white;
+    }
+
+    .contract-card .card-body {
+        padding: 16px;
+    }
+
+    /* Секция адреса */
+    .address-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 8px 12px;
+        margin: 8px 0;
+    }
+
+    .address-text {
+        word-wrap: break-word;
+        white-space: normal;
+        line-height: 1.4;
+        font-size: 0.85rem;
+        color: #2c3e50;
+    }
+
+    /* Секция заказчика */
+    .customer-section {
+        border-bottom: 1px dashed #e0e0e0;
+        padding-bottom: 8px;
+    }
+
+    /* Сотрудники вертикально */
+    .employees-vertical {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 10px;
+    }
+
+    .employee-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background-color: white;
+        border-radius: 10px;
+        transition: all 0.2s;
+    }
+
+    .employee-item:hover {
+        transform: translateX(4px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .employee-item i {
+        font-size: 1.2rem;
+        width: 30px;
+        text-align: center;
+    }
+
+    .employee-info {
+        flex: 1;
+    }
+
+    .employee-name {
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: block;
+        color: #2c3e50;
+    }
+
+    .employee-label {
+        font-size: 0.65rem;
+        color: #6c757d;
+        display: block;
+        margin-top: 2px;
+    }
+
+    /* Адаптивность для мобильных устройств */
+    @media (max-width: 768px) {
+        .employees-row {
             flex-direction: column;
-            font-size: 0.85rem;  /* Уменьшен базовый шрифт */
+            gap: 8px;
         }
         
-        /* Навигация - фиксированная сверху */
-        .navbar {
-            flex-shrink: 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            font-size: 0.9rem;  /* Уменьшен шрифт навигации */
-        }
-        
-        /* Основной контент - занимает всё оставшееся пространство */
-        .main-content {
-            flex: 1;
-            padding: 15px 0;  /* Уменьшен отступ */
-            overflow-y: auto;
-        }
-        
-        /* Контейнер на всю ширину */
-        .container-fluid-custom {
+        .employee-item {
             width: 100%;
-            padding-right: 20px;
-            padding-left: 20px;
-            margin-right: auto;
-            margin-left: auto;
         }
-        
-        /* Таблица на всю ширину с горизонтальной прокруткой */
-        .table-responsive-custom {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .table {
-            margin-bottom: 0;
-            min-width: 1100px;
-        }
-        
-        .table thead th {
-            background-color: #2c3e50;
-            color: white;
-            font-weight: 600;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            padding: 8px 12px;  /* Уменьшен padding */
-        }
-        
-        .table tbody td {
-            padding: 6px 12px;  /* Уменьшен padding */
-            vertical-align: middle;
-        }
-        
-        .table tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-        
-        /* Карточка для фильтров и поиска */
-        .search-card {
-            background: white;
-            border-radius: 8px;
-            padding: 12px 16px;  /* Уменьшен padding */
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        
-        /* Кнопка добавления */
-        .btn-add {
-            padding: 5px 12px;
-            font-weight: 500;
-            border-radius: 6px;
-            font-size: 0.85rem;
-        }
-        
-        /* Пагинация */
-        .pagination-container {
-            background: white;
-            border-radius: 8px;
-            padding: 10px 16px;  /* Уменьшен padding */
-            margin-top: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        
-        /* Badges для приоритетов */
-        .badge-priority {
-            padding: 4px 8px;
-            font-weight: 500;
-            font-size: 0.7rem;
-            border-radius: 4px;
-        }
-        
-        /* Статусы */
-        .status-badge {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            display: inline-block;
-            white-space: nowrap;
-        }
-        
-        .status-in_progress { background-color: #ffc107; color: #000; }
-        .status-completed { background-color: #28a745; color: #fff; }
-        .status-finished { background-color: #17a2b8; color: #fff; }
-        .status-suspended { background-color: #dc3545; color: #fff; }
-        
-        /* Модальное окно - не на весь экран */
-        @media (min-width: 992px) {
-            .modal-lg {
-                max-width: 800px;  /* Установлен максимальный размер */
-            }
-        }
-        
-        /* Стили для скроллбара */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        
-        /* Уменьшение размера форм в модальном окне */
-        .modal-body .form-label {
-            font-size: 0.8rem;
-            margin-bottom: 4px;
-        }
-        
-        .modal-body .form-control,
-        .modal-body .form-select {
-            font-size: 0.85rem;
-            padding: 5px 8px;
-        }
-        
-        .modal-body .mb-3 {
-            margin-bottom: 0.75rem !important;
-        }
-        
-        .modal-body .card-header h6 {
-            font-size: 0.9rem;
-        }
-        
-        .modal-body .card-body {
-            padding: 0.75rem;
-        }
-        /* Стили для карточки поиска - единые для всех страниц */
-        .search-card {
-            background: white;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
+    }
 
-        .table-responsive-custom {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    /* Адаптивность для мобильных устройств */
+    @media (max-width: 768px) {
+        .employees-row {
+            flex-direction: column;
+            gap: 8px;
         }
-
-        .table {
-            margin-bottom: 0;
-            min-width: 1000px;
+        
+        .employee-item {
+            width: 100%;
         }
-
-        .table thead th {
-            background-color: #2c3e50;
-            color: white;
-            font-weight: 600;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            padding: 8px 12px;
+        
+        .employee-name {
+            white-space: normal;
+            line-height: 1.3;
         }
+    }
 
-        .table tbody td {
-            padding: 6px 12px;
-            vertical-align: middle;
-        }
+    /* Секция адреса */
+    .address-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 8px 12px;
+        margin: 8px 0;
+    }
 
-        .table tbody tr:hover {
-            background-color: #f8f9fa;
-        }
+    .address-text {
+        word-wrap: break-word;
+        white-space: normal;
+        line-height: 1.4;
+        font-size: 0.85rem;
+        color: #2c3e50;
+    }
 
-        .pagination-container {
-            background: white;
-            border-radius: 8px;
-            padding: 10px 16px;
-            margin-top: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        .status-badge {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            display: inline-block;
-            white-space: nowrap;
-        }
-
-        /* Компактная статистика */
+    /* Секция заказчика */
+    .customer-section {
+        border-bottom: 1px dashed #e0e0e0;
+        padding-bottom: 8px;
+    }
+    
+    /* ========== СТИЛИ ДЛЯ СТАТИСТИКИ ========== */
+    .fs-7 {
+        font-size: 0.7rem;
+    }
+    
+    .card-body.py-2 {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    
+    .card-body.px-3 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    
+    @media (max-width: 576px) {
         .fs-7 {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
         }
-
-        .card-body.py-2 {
-            padding-top: 0.5rem !important;
-            padding-bottom: 0.5rem !important;
-        }
-
-        .card-body.px-3 {
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-
-                .status-badge-completed {
-            background-color: #28a745;
-            color: white;
-        }
-        .status-badge-in_progress {
-            background-color: #ffc107;
-            color: black;
-        }
-        .status-badge-finished {
-            background-color: #17a2b8;
-            color: white;
-        }
-        .status-badge-suspended {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        @media (max-width: 576px) {
-            .fs-7 {
-                font-size: 0.65rem;
-            }
-            h5 {
-                font-size: 1rem;
-            }
-        }
-        /* Анимация для сворачивания карточки статистики */
-        #statsCard .stats-content {
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-
-        #statsCard.collapsed .stats-content {
-            display: none;
-        }
-
-        #statsToggleIcon {
-            transition: transform 0.3s ease;
+        h5 {
             font-size: 1rem;
         }
-
-        .btn-link {
-            text-decoration: none;
+    }
+    
+    /* Анимация для сворачивания карточки статистики */
+    #statsCard .stats-content {
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    #statsCard.collapsed .stats-content {
+        display: none;
+    }
+    
+    #statsToggleIcon {
+        transition: transform 0.3s ease;
+        font-size: 1rem;
+    }
+    
+    .btn-link {
+        text-decoration: none;
+    }
+    
+    .btn-link:hover {
+        opacity: 0.8;
+    }
+    
+    /* ========== СТИЛИ ДЛЯ СТАТУСОВ ========== */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+    
+    .status-in_progress {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-completed {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-finished {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .status-suspended {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    /* Badges для статусов в статистике */
+    .status-badge-completed {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .status-badge-in_progress {
+        background-color: #ffc107;
+        color: black;
+    }
+    
+    .status-badge-finished {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .status-badge-suspended {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    /* ========== СТИЛИ ДЛЯ ПРИОРИТЕТОВ ========== */
+    .badge-priority {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+    
+    /* ========== СТИЛИ ДЛЯ ПОИСКА И ФИЛЬТРОВ ========== */
+    .search-card {
+        background: white;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    /* ========== СТИЛИ ДЛЯ ПАГИНАЦИИ ========== */
+    .pagination-container {
+        background: white;
+        border-radius: 8px;
+        padding: 10px 16px;
+        margin-top: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    /* ========== СТИЛИ ДЛЯ МОДАЛЬНЫХ ОКОН ========== */
+    @media (min-width: 992px) {
+        .modal-lg {
+            max-width: 800px;
         }
+    }
+    
+    .modal-body .form-label {
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+    }
+    
+    .modal-body .form-control,
+    .modal-body .form-select {
+        font-size: 0.85rem;
+        padding: 5px 8px;
+    }
+    
+    .modal-body .mb-3 {
+        margin-bottom: 0.75rem !important;
+    }
+    
+    .modal-body .card-header h6 {
+        font-size: 0.9rem;
+    }
+    
+    .modal-body .card-body {
+        padding: 0.75rem;
+    }
+    
+    /* ========== СТИЛИ ДЛЯ СКРОЛЛБАРА ========== */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* ========== ВСПОМОГАТЕЛЬНЫЕ КЛАССЫ ========== */
+    .btn-add {
+        padding: 5px 12px;
+        font-weight: 500;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
 
-        .btn-link:hover {
-            opacity: 0.8;
+    /* Компактные детали договора */
+    .contract-details {
+        font-size: 0.8rem;
+    }
+
+    .detail-group {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 8px 12px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 4px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .detail-value {
+        font-size: 0.8rem;
+        color: #2c3e50;
+        text-align: right;
+        word-break: break-word;
+        max-width: 60%;
+    }
+
+    /* Адаптивность */
+    @media (max-width: 576px) {
+        .detail-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
         }
-    </style>
+        
+        .detail-value {
+            text-align: left;
+            max-width: 100%;
+        }
+    }
+
+    .employee-detail-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background-color: white;
+        border-radius: 10px;
+        margin-bottom: 8px;
+    }
+
+    .employee-detail-item i {
+        font-size: 1.2rem;
+    }
+
+    /* Стиль для карточки при клике */
+    .contract-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .contract-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1) !important;
+    }
+    /* Примечание в карточке */
+    .note-section {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 6px 8px;
+        margin-top: 6px;
+    }
+
+    .note-text {
+        color: #495057;
+        line-height: 1.3;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+
+    .note-placeholder {
+        color: #adb5bd;
+        font-style: italic;
+    }
+
+    .note-meta {
+        margin-top: 2px;
+    }
+</style>
     
     {% block extra_head %}{% endblock %}
 </head>
