@@ -22,6 +22,8 @@ class ContractListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Поиск по тексту
         q = self.request.GET.get('q', '')
         if q:
             queryset = queryset.filter(
@@ -37,7 +39,7 @@ class ContractListView(LoginRequiredMixin, ListView):
                 Q(cadastral_engineer__full_name__icontains=q) |
                 Q(designer__full_name__icontains=q)
             )
-            return queryset
+        # Убираем return - он не должен быть здесь!
         
         # Фильтры по сотрудникам
         geodesist_id = self.request.GET.get('geodesist')
@@ -60,8 +62,83 @@ class ContractListView(LoginRequiredMixin, ListView):
         priority = self.request.GET.get('priority')
         if priority:
             queryset = queryset.filter(priority=priority)
+
+        # СОРТИРОВКА - расширенная
+        sort_by = self.request.GET.get('sort', '-date')
+        
+        # Карта допустимых полей для сортировки
+        sort_fields = {
+            'number': 'number',
+            '-number': '-number',
+            'date': 'date',
+            '-date': '-date',
+            'completion_date': 'completion_date',
+            '-completion_date': '-completion_date',
+            'amount': 'amount',
+            '-amount': '-amount',
+            'customer': 'customer__name',
+            '-customer': '-customer__name',
+            'status': 'status',
+            '-status': '-status',
+            'priority': 'priority',
+            '-priority': '-priority',
+            'work_description': 'work_description',
+            '-work_description': '-work_description',
+            'work_type': 'work_type',
+            '-work_type': '-work_type',
+            'contract_type': 'contract_type',
+            '-contract_type': '-contract_type',
+        }
+        
+        if sort_by in sort_fields:
+            queryset = queryset.order_by(sort_fields[sort_by])
+        else:
+            queryset = queryset.order_by('-date')
         
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('q', '')
+        context['sort_by'] = self.request.GET.get('sort', '-date')
+        context['priority_colors'] = {
+            'relax': 'success',
+            'normal': 'primary',
+            'urgent': 'warning',
+            'critical': 'danger',
+        }
+        
+        # Статистика для отфильтрованных договоров
+        filtered_queryset = self.get_queryset()
+        total_sum = filtered_queryset.aggregate(total=Sum('amount'))['total'] or 0
+        completed_sum = filtered_queryset.filter(status='completed').aggregate(total=Sum('amount'))['total'] or 0
+        
+        status_stats = {}
+        for status_code, status_name in Contract.STATUS_CHOICES:
+            status_stats[status_code] = {
+                'name': status_name,
+                'count': filtered_queryset.filter(status=status_code).count(),
+                'sum': filtered_queryset.filter(status=status_code).aggregate(total=Sum('amount'))['total'] or 0
+            }
+        
+        context['total_sum'] = total_sum
+        context['completed_sum'] = completed_sum
+        context['status_stats'] = status_stats
+        
+        # Списки для фильтров
+        from .models import Employee
+        context['geodesists'] = Employee.objects.filter(position='geodesist')
+        context['engineers'] = Employee.objects.filter(position='cadastral_engineer')
+        context['designers'] = Employee.objects.filter(position='designer')
+        
+        # Выбранные значения фильтров
+        context['selected_geodesist'] = self.request.GET.get('geodesist', '')
+        context['selected_engineer'] = self.request.GET.get('cadastral_engineer', '')
+        context['selected_designer'] = self.request.GET.get('designer', '')
+        context['selected_status'] = self.request.GET.get('status', '')
+        context['selected_priority'] = self.request.GET.get('priority', '')
+        
+        return context
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
